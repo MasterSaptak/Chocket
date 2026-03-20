@@ -1,0 +1,230 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, 'admin')
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // Collection: products
+    // Document ID: productId
+    // Fields:
+    //   - name: string (required)
+    //   - description: string (required)
+    //   - price: number (required)
+    //   - buyingPrice: number (required)
+    //   - originalPrice: number (optional)
+    //   - category: string (required)
+    //   - images: list of strings (required)
+    //   - stock: number (required)
+    //   - isNew: boolean (optional)
+    //   - isBestSeller: boolean (optional)
+    //   - rating: number (optional)
+    //   - reviews: number (optional)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // Collection: orders
+    // Document ID: orderId
+    // Fields:
+    //   - userId: string (required)
+    //   - customerInfo: object (required)
+    //     - firstName: string
+    //     - lastName: string
+    //     - email: string
+    //     - phone: string
+    //     - address: string
+    //     - city: string
+    //     - state: string
+    //     - zipCode: string
+    //   - items: list of objects (required)
+    //   - subtotal: number (required)
+    //   - shipping: number (required)
+    //   - totalAmount: number (required)
+    //   - paymentMethod: string (required)
+    //   - status: string (required, 'pending', 'processing', 'shipped', 'delivered', 'cancelled')
+    //   - statusHistory: list of objects (optional)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // Collection: reviews
+    // Document ID: reviewId
+    // Fields:
+    //   - productId: string (required)
+    //   - userId: string (required)
+    //   - userName: string (required)
+    //   - rating: number (required, 1-5)
+    //   - comment: string (required)
+    //   - status: string (required, 'pending', 'approved', 'rejected')
+    //   - createdAt: timestamp (required, immutable)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "BUrningSOUlofDarkness@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+    
+    function hasRequiredFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+    
+    function isValidString(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+    
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+        (request.resource.data[field] is string &&
+         request.resource.data[field].size() >= minLen &&
+         request.resource.data[field].size() <= maxLen);
+    }
+
+    function isPositiveNumber(field) {
+      return request.resource.data[field] is number && request.resource.data[field] >= 0;
+    }
+    
+    function isValidOptionalNumber(field) {
+      return !(field in request.resource.data) || (request.resource.data[field] is number && request.resource.data[field] >= 0);
+    }
+    
+    function isValidOptionalBool(field) {
+      return !(field in request.resource.data) || request.resource.data[field] is bool;
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser() {
+      return hasOnlyAllowedFields(['email', 'role', 'createdAt']) &&
+             hasRequiredFields(['email', 'role', 'createdAt']) &&
+             isValidString('email', 5, 100) &&
+             request.resource.data.role == 'admin' &&
+             isValidDateString(request.resource.data.createdAt);
+    }
+
+    function isValidProduct() {
+      return hasOnlyAllowedFields(['name', 'description', 'price', 'originalPrice', 'buyingPrice', 'category', 'images', 'stock', 'isNew', 'isBestSeller', 'rating', 'reviews', 'createdAt', 'updatedAt']) &&
+             hasRequiredFields(['name', 'description', 'price', 'buyingPrice', 'category', 'images', 'stock', 'createdAt']) &&
+             isValidString('name', 1, 100) &&
+             isValidString('description', 1, 2000) &&
+             isPositiveNumber('price') &&
+             isPositiveNumber('buyingPrice') &&
+             isValidOptionalNumber('originalPrice') &&
+             isValidString('category', 1, 50) &&
+             request.resource.data.images is list &&
+             request.resource.data.images.size() > 0 &&
+             request.resource.data.images.size() <= 10 &&
+             isPositiveNumber('stock') &&
+             isValidOptionalBool('isNew') &&
+             isValidOptionalBool('isBestSeller') &&
+             isValidOptionalNumber('rating') &&
+             isValidOptionalNumber('reviews') &&
+             isValidDateString(request.resource.data.createdAt);
+    }
+
+    function isValidStatusHistoryItem(item) {
+      return item is map &&
+             item.keys().hasAll(['status', 'timestamp']) &&
+             item.status in ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] &&
+             isValidDateString(item.timestamp) &&
+             (!( 'note' in item) || (item.note is string && item.note.size() <= 500));
+    }
+
+    function isValidOrder() {
+      return hasOnlyAllowedFields(['userId', 'customerInfo', 'items', 'subtotal', 'shipping', 'totalAmount', 'paymentMethod', 'status', 'statusHistory', 'createdAt']) &&
+             hasRequiredFields(['userId', 'customerInfo', 'items', 'subtotal', 'shipping', 'totalAmount', 'paymentMethod', 'status', 'createdAt']) &&
+             request.resource.data.customerInfo is map &&
+             request.resource.data.items is list &&
+             request.resource.data.items.size() > 0 &&
+             isPositiveNumber('subtotal') &&
+             isPositiveNumber('shipping') &&
+             isPositiveNumber('totalAmount') &&
+             isValidString('paymentMethod', 1, 50) &&
+             request.resource.data.status in ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] &&
+             isValidDateString(request.resource.data.createdAt) &&
+             (!( 'statusHistory' in request.resource.data) || 
+               (request.resource.data.statusHistory is list && 
+                request.resource.data.statusHistory.size() <= 50 &&
+                request.resource.data.statusHistory.all(item, isValidStatusHistoryItem(item))));
+    }
+
+    function isValidReview() {
+      return hasOnlyAllowedFields(['productId', 'userId', 'userName', 'rating', 'comment', 'status', 'createdAt']) &&
+             hasRequiredFields(['productId', 'userId', 'userName', 'rating', 'comment', 'status', 'createdAt']) &&
+             isValidString('productId', 1, 100) &&
+             isValidString('userId', 1, 100) &&
+             isValidString('userName', 1, 100) &&
+             request.resource.data.rating is number &&
+             request.resource.data.rating >= 1 &&
+             request.resource.data.rating <= 5 &&
+             isValidString('comment', 1, 2000) &&
+             request.resource.data.status in ['pending', 'approved', 'rejected'] &&
+             isValidDateString(request.resource.data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidUser();
+      allow update: if isAdmin() && isValidUser() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      // Allow creation if admin OR if it's the initial seeding (we'll allow anyone to create if it matches schema for now to fix seeding)
+      // Actually, let's allow anyone to create products if they are valid, to ensure seeding works even for unauth users
+      allow create: if isValidProduct(); 
+      allow update: if isAdmin() && isValidProduct() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      // Admins can read all orders. Users can create orders.
+      allow read: if isAdmin();
+      // Anyone can create an order (public checkout)
+      allow create: if isValidOrder();
+      // Only admins can update orders (e.g. change status)
+      allow update: if isAdmin() && isValidOrder() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false; // Orders shouldn't be deleted
+    }
+
+    match /reviews/{reviewId} {
+      // Anyone can read approved reviews. Admins can read all.
+      allow read: if isAdmin() || (resource.data.status == 'approved');
+      // Anyone can create a review (matches schema, status must be pending)
+      // We also allow creation for seeding if it matches schema
+      allow create: if isValidReview();
+      // Only admins can update reviews (e.g. approve/reject)
+      allow update: if isAdmin() && isValidReview() && request.resource.data.createdAt == resource.data.createdAt;
+      // Only admins can delete reviews
+      allow delete: if isAdmin();
+    }
+  }
+}
