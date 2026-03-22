@@ -1,16 +1,81 @@
 'use client';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, MapPin, Heart, Package, Settings, LogOut, ChevronRight, Edit3 } from 'lucide-react';
-import { useState } from 'react';
+import { User, MapPin, Heart, Package, Settings, LogOut, ChevronRight, Edit3, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import Image from 'next/image';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { updateProfile } from 'firebase/auth';
+import { updateUserProfile } from '@/lib/users';
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'wishlist' | 'addresses'>('profile');
+  const [isVerified, setIsVerified] = useState(user?.emailVerified || false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form states
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [dob, setDob] = useState('');
+
+  // Sync state with userData
+  useEffect(() => {
+    if (userData) {
+      setName(userData.name || '');
+      setPhone(userData.phone || '');
+      setDob(userData.dob || '');
+    }
+  }, [userData]);
+
+  // Auto-refresh verification status
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (user && !isVerified) {
+      interval = setInterval(() => {
+        user.reload().then(() => {
+          if (auth.currentUser?.emailVerified) {
+            setIsVerified(true);
+            toast.success('Email successfully verified! ✅');
+          }
+        });
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [user, isVerified]);
+
+  const handleSave = async () => {
+    if (!user) {
+      toast.error('No user found');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      // 1. Update Firebase Auth Profile (DisplayName)
+      console.log('Updating Auth profile for:', name);
+      await updateProfile(user, { displayName: name });
+
+      // 2. Update Firestore user document
+      console.log('Updating Firestore profile for:', user.uid);
+      await updateUserProfile(user.uid, { 
+        name: name || '', 
+        phone: phone || '', 
+        dob: dob || '' 
+      });
+
+      toast.success('Profile updated successfully! ✨');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast.error(error.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Dummy data arrays for showcasing the structure while Firebase builds up history
   const orders = [
@@ -28,9 +93,14 @@ export default function ProfilePage() {
     { id: 'a2', type: 'Work', full: '45 Cocoa Street, Truffle Tower, London EC1A 1BB, United Kingdom', default: false }
   ];
 
-  const handleSignOut = () => {
-    signOut(auth);
-    toast.success('Signed out successfully');
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast.success('Signed out successfully');
+      router.push('/');
+    } catch {
+      toast.error('Failed to log out');
+    }
   };
 
   const tabs = [
@@ -55,6 +125,22 @@ export default function ProfilePage() {
         >
           {/* Sidebar */}
           <div className="w-full md:w-80 flex-shrink-0">
+            {/* Warning Banner if not verified */}
+            {!loading && user && !isVerified && (
+              <div className="bg-red-500/10 border border-red-500/50 rounded-2xl p-4 mb-6 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-red-400 font-semibold text-sm">Not Verified ❌</h4>
+                  <p className="text-red-400/80 text-xs mt-1 mb-2">
+                    Please verify your email address to get full access to your account and place orders.
+                  </p>
+                  <button onClick={() => router.push('/verify-email')} className="text-xs font-bold text-[#1A0F0B] bg-red-400 px-3 py-1.5 rounded-lg hover:bg-red-300 transition-colors">
+                    Verify Now
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="glass-dark border border-[#3E2723]/50 rounded-3xl p-6 sticky top-28 shadow-2xl">
               
               {/* User Avatar Card */}
@@ -71,9 +157,23 @@ export default function ProfilePage() {
                     <Edit3 className="w-4 h-4" />
                   </button>
                 </div>
-                <h2 className="text-xl font-display font-semibold text-[#FFF3E0]">
-                  {loading ? 'Loading...' : (user?.displayName || 'Chocolate Lover')}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-display font-semibold text-[#FFF3E0]">
+                    {loading ? 'Loading...' : (userData?.name || user?.displayName || 'Chocolate Lover')}
+                  </h2>
+                  {/* Verified Badge */}
+                  {!loading && user && (
+                    isVerified ? (
+                      <span title="Verified ✅" className="flex items-center justify-center bg-green-500/20 text-green-400 p-1 rounded-full border border-green-500/30">
+                        <ShieldCheck className="w-4 h-4" />
+                      </span>
+                    ) : (
+                      <span title="Not Verified ❌" className="flex items-center justify-center bg-red-500/20 text-red-400 p-1 rounded-full border border-red-500/30">
+                        <AlertTriangle className="w-4 h-4" />
+                      </span>
+                    )
+                  )}
+                </div>
                 <p className="text-sm text-[#FFF3E0]/50 mt-1">
                   {user?.email || 'premium.member@chocket.com'}
                 </p>
@@ -146,38 +246,55 @@ export default function ProfilePage() {
                         <label className="text-xs text-[#FFF3E0]/50 uppercase tracking-wider font-medium">Full Name</label>
                         <input 
                           type="text" 
-                          defaultValue={user?.displayName || "Chocolate Lover"}
-                          className="w-full bg-[#1A0F0B] border border-[#3E2723] rounded-xl px-4 py-3 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Chocolate Lover"
+                          className="w-full bg-[#1A0F0B] border border-[#3E2723] rounded-xl px-4 py-3 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all font-medium"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs text-[#FFF3E0]/50 uppercase tracking-wider font-medium">Email Address</label>
                         <input 
                           type="email" 
-                          defaultValue={user?.email || "premium.member@chocket.com"}
+                          value={user?.email || "premium.member@chocket.com"}
                           disabled
-                          className="w-full bg-[#1A0F0B]/50 border border-[#3E2723]/50 rounded-xl px-4 py-3 text-[#FFF3E0]/50 cursor-not-allowed"
+                          className="w-full bg-[#1A0F0B]/50 border border-[#3E2723]/50 rounded-xl px-4 py-3 text-[#FFF3E0]/30 cursor-not-allowed font-medium"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs text-[#FFF3E0]/50 uppercase tracking-wider font-medium">Phone Number</label>
                         <input 
                           type="tel" 
-                          placeholder="+1 (555) 000-0000"
-                          className="w-full bg-[#1A0F0B] border border-[#3E2723] rounded-xl px-4 py-3 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="+91 98765 43210"
+                          className="w-full bg-[#1A0F0B] border border-[#3E2723] rounded-xl px-4 py-3 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all font-medium"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs text-[#FFF3E0]/50 uppercase tracking-wider font-medium">Date of Birth (For Birthday Treats!)</label>
                         <input 
                           type="date" 
-                          className="w-full bg-[#1A0F0B] border border-[#3E2723] rounded-xl px-4 py-3 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all [&::-webkit-calendar-picker-indicator]:invert-[0.8]"
+                          value={dob}
+                          onChange={(e) => setDob(e.target.value)}
+                          className="w-full bg-[#1A0F0B] border border-[#3E2723] rounded-xl px-4 py-3 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all [&::-webkit-calendar-picker-indicator]:invert-[0.8] font-medium"
                         />
                       </div>
                     </div>
                     <div className="mt-8 flex justify-end">
-                      <button className="gold-gradient text-[#1A0F0B] px-8 py-3 rounded-full font-semibold shadow-lg hover:scale-105 transition-transform active:scale-95">
-                        Save Changes
+                      <button 
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="gold-gradient text-[#1A0F0B] px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-all active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center gap-2"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
                       </button>
                     </div>
                   </div>

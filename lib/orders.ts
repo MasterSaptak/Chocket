@@ -1,4 +1,4 @@
-import { db, OperationType, handleFirestoreError } from '@/firebase';
+import { db, OperationType, handleFirestoreError } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, query, orderBy, onSnapshot, arrayUnion } from 'firebase/firestore';
 
 export interface OrderItem {

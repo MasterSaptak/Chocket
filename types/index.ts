@@ -1,3 +1,42 @@
+// ===== ROLE & STATUS TYPES =====
+export type UserRole = 'buyer' | 'seller' | 'admin' | 'primeadmin';
+export type UserStatus = 'active' | 'banned';
+export type SellerApplicationStatus = 'pending' | 'approved' | 'rejected';
+export type SellingPlatform = 'Instagram' | 'Facebook' | 'Offline' | 'Website' | 'Other';
+
+// ===== USER =====
+export interface ChocketUser {
+  uid: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
+  isVerified: boolean;
+  profileImage: string;
+  dob?: string;
+}
+
+// ===== SELLER APPLICATION =====
+export interface SellerApplication {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  sellingPlatform: SellingPlatform;
+  experience: string;
+  identityProof: string; // file URL
+  status: SellerApplicationStatus;
+  appliedAt: string;
+  reviewedBy?: string; // admin uid
+  reviewedAt?: string;
+  rejectionReason?: string;
+}
+
+// ===== LEGACY / EXISTING TYPES (kept for backward compat) =====
 export interface User {
   uid: string;
   name: string;
@@ -5,6 +44,7 @@ export interface User {
   phone?: string;
   addresses: Address[];
   wishlist: string[]; // array of product IDs
+  isVerified: boolean;
   createdAt: Date | string | number;
 }
 
@@ -15,7 +55,7 @@ export interface Address {
   city: string;
   state: string;
   zipCode: string;
-  country: string; // Used for dynamic pricing and cross-border delivery
+  country: string;
   isDefault: boolean;
 }
 
@@ -25,13 +65,13 @@ export interface Product {
   brand: string;
   description: string;
   prices: {
-    [currency: string]: number; // e.g., { USD: 25, INR: 1500, EUR: 23 }
+    [currency: string]: number;
   };
   images: string[];
   category: string;
   stock: number;
   rating: number;
-  countryAvailability: string[]; // e.g., ['US', 'IN', 'UK', 'CA']
+  countryAvailability: string[];
   createdAt: Date | string | number;
 }
 

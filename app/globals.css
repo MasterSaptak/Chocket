@@ -40,8 +40,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-playfair);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-cinzel);
+  --font-serif: var(--font-cormorant);
 }
 
 @layer base {
@@ -124,6 +125,12 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
     animation: goldShift 5s ease infinite;
+  }
+  .majestic-shadow {
+    text-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 80px rgba(212,175,55,0.1);
+  }
+  .font-majestic {
+    @apply font-serif italic tracking-wider;
   }
 }
 

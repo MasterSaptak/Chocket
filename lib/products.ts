@@ -1,4 +1,4 @@
-import { db, OperationType, handleFirestoreError } from '@/firebase';
+import { db, OperationType, handleFirestoreError } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { Product } from '@/components/ProductCard';
 

@@ -6,7 +6,7 @@ import { CheckCircle2, CreditCard, Wallet, Truck, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/components/CartProvider';
 import { toast } from 'sonner';
-import { db, auth } from '@/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import Image from 'next/image';
 

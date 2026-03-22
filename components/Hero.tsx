@@ -11,17 +11,25 @@ import { InstallPWA } from './InstallPWA';
 function ChocoGlobe() {
   return (
     <motion.div
-      className="inline-block relative align-middle"
+      className="inline-block relative align-middle group cursor-pointer"
       style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle' }}
-      animate={{ rotate: [0, 360] }}
-      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+      animate={{ 
+        y: [-2, 4, -2],
+        rotate: [0, 5, -5, 0],
+        scale: [1, 1.08, 1]
+      }}
+      transition={{ 
+        duration: 6, 
+        repeat: Infinity, 
+        ease: 'easeInOut' 
+      }}
+      whileHover={{ scale: 1.2, rotate: 15 }}
     >
       <svg
         viewBox="0 0 120 120"
-        className="w-full h-full drop-shadow-[0_0_15px_rgba(212,175,55,0.4)]"
+        className="w-full h-full drop-shadow-[0_0_20px_rgba(212,175,55,0.6)]"
       >
         <defs>
-          {/* Chocolate sphere gradient */}
           <radialGradient id="chocoSphere" cx="40%" cy="35%" r="55%">
             <stop offset="0%" stopColor="#8D6E63" />
             <stop offset="35%" stopColor="#5D4037" />
@@ -29,85 +37,68 @@ function ChocoGlobe() {
             <stop offset="100%" stopColor="#1A0F0B" />
           </radialGradient>
 
-          {/* Glossy highlight */}
           <radialGradient id="chocoGloss" cx="35%" cy="30%" r="35%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
+            <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0)" />
           </radialGradient>
 
-          {/* Gold continent fill */}
           <linearGradient id="goldContinent" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#F9F295" />
             <stop offset="50%" stopColor="#D4AF37" />
             <stop offset="100%" stopColor="#B8860B" />
           </linearGradient>
 
-          {/* Clip to circle */}
           <clipPath id="globeClip">
             <circle cx="60" cy="60" r="56" />
           </clipPath>
+
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
         </defs>
+
+        {/* Outer Halo */}
+        <motion.circle 
+          cx="60" cy="60" r="58" 
+          fill="none" 
+          stroke="#D4AF37" 
+          strokeWidth="0.5" 
+          opacity="0.2"
+          animate={{ opacity: [0.1, 0.4, 0.1], scale: [0.95, 1.05, 0.95] }}
+          transition={{ duration: 3, repeat: Infinity }}
+        />
 
         {/* Base chocolate sphere */}
         <circle cx="60" cy="60" r="56" fill="url(#chocoSphere)" />
 
-        {/* Continents group — counter-rotates so they spin on the globe surface */}
+        {/* Continents group — simulated 3D rotation by sliding */}
         <g clipPath="url(#globeClip)">
-          <animateTransform
-            attributeName="transform"
-            type="rotate"
-            from="0 60 60"
-            to="-360 60 60"
-            dur="20s"
-            repeatCount="indefinite"
-          />
-          {/* North America */}
-          <path
-            d="M28,30 Q32,22 42,24 Q48,20 52,26 Q50,34 44,38 Q38,42 32,38 Q26,36 28,30Z"
-            fill="url(#goldContinent)"
-            opacity="0.85"
-          />
-          {/* South America */}
-          <path
-            d="M38,52 Q42,48 46,52 Q48,60 46,68 Q44,74 40,72 Q36,68 36,60 Q36,56 38,52Z"
-            fill="url(#goldContinent)"
-            opacity="0.8"
-          />
-          {/* Europe */}
-          <path
-            d="M58,28 Q62,24 66,28 Q68,32 66,36 Q62,38 58,34 Q56,32 58,28Z"
-            fill="url(#goldContinent)"
-            opacity="0.85"
-          />
-          {/* Africa */}
-          <path
-            d="M60,42 Q66,38 70,42 Q74,50 72,60 Q70,68 66,70 Q62,68 60,60 Q58,50 60,42Z"
-            fill="url(#goldContinent)"
-            opacity="0.8"
-          />
-          {/* Asia */}
-          <path
-            d="M72,26 Q78,22 86,26 Q92,32 90,38 Q86,44 82,46 Q76,48 74,42 Q70,36 72,26Z"
-            fill="url(#goldContinent)"
-            opacity="0.85"
-          />
-          {/* Australia */}
-          <path
-            d="M84,60 Q88,56 92,60 Q94,64 90,68 Q86,66 84,60Z"
-            fill="url(#goldContinent)"
-            opacity="0.8"
-          />
-          {/* Wrapped-around continents (for seamless rotation) */}
-          <path
-            d="M108,30 Q112,22 122,24 Q128,20 132,26 Q130,34 124,38 Q118,42 112,38 Q106,36 108,30Z"
-            fill="url(#goldContinent)"
-            opacity="0.85"
-          />
-          <path
-            d="M118,52 Q122,48 126,52 Q128,60 126,68 Q124,74 120,72 Q116,68 116,60 Q116,56 118,52Z"
-            fill="url(#goldContinent)"
-            opacity="0.8"
-          />
+          <motion.g
+            animate={{ x: [0, -120] }}
+            transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+          >
+            {/* Set 1 */}
+            <path d="M28,30 Q32,22 42,24 Q48,20 52,26 Q50,34 44,38 Q38,42 32,38 Q26,36 28,30Z" fill="url(#goldContinent)" opacity="0.9" />
+            <path d="M38,52 Q42,48 46,52 Q48,60 46,68 Q44,74 40,72 Q36,68 36,60 Q36,56 38,52Z" fill="url(#goldContinent)" opacity="0.85" />
+            <path d="M58,28 Q62,24 66,28 Q68,32 66,36 Q62,38 58,34 Q56,32 58,28Z" fill="url(#goldContinent)" opacity="0.9" />
+            <path d="M60,42 Q66,38 70,42 Q74,50 72,60 Q70,68 66,70 Q62,68 60,60 Q58,50 60,42Z" fill="url(#goldContinent)" opacity="0.85" />
+            <path d="M72,26 Q78,22 86,26 Q92,32 90,38 Q86,44 82,46 Q76,48 74,42 Q70,36 72,26Z" fill="url(#goldContinent)" opacity="0.9" />
+            <path d="M84,60 Q88,56 92,60 Q94,64 90,68 Q86,66 84,60Z" fill="url(#goldContinent)" opacity="0.85" />
+            
+            {/* Set 2 (Offset by 120 for seamless wrap) */}
+            <g transform="translate(120, 0)">
+              <path d="M28,30 Q32,22 42,24 Q48,20 52,26 Q50,34 44,38 Q38,42 32,38 Q26,36 28,30Z" fill="url(#goldContinent)" opacity="0.9" />
+              <path d="M38,52 Q42,48 46,52 Q48,60 46,68 Q44,74 40,72 Q36,68 36,60 Q36,56 38,52Z" fill="url(#goldContinent)" opacity="0.85" />
+              <path d="M58,28 Q62,24 66,28 Q68,32 66,36 Q62,38 58,34 Q56,32 58,28Z" fill="url(#goldContinent)" opacity="0.9" />
+              <path d="M60,42 Q66,38 70,42 Q74,50 72,60 Q70,68 66,70 Q62,68 60,60 Q58,50 60,42Z" fill="url(#goldContinent)" opacity="0.85" />
+              <path d="M72,26 Q78,22 86,26 Q92,32 90,38 Q86,44 82,46 Q76,48 74,42 Q70,36 72,26Z" fill="url(#goldContinent)" opacity="0.9" />
+              <path d="M84,60 Q88,56 92,60 Q94,64 90,68 Q86,66 84,60Z" fill="url(#goldContinent)" opacity="0.85" />
+            </g>
+          </motion.g>
         </g>
 
         {/* Glossy reflection */}
@@ -122,8 +113,13 @@ function ChocoGlobe() {
           opacity="0.3"
         />
 
-        {/* Tiny specular highlight */}
-        <ellipse cx="42" cy="36" rx="12" ry="8" fill="white" opacity="0.12" />
+        {/* Specular glints */}
+        <motion.ellipse 
+          cx="42" cy="36" rx="12" ry="8" 
+          fill="white" 
+          animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.1, 1] }} 
+          transition={{ duration: 4, repeat: Infinity }}
+        />
       </svg>
 
       {/* Orbiting gold particles */}
@@ -134,24 +130,22 @@ function ChocoGlobe() {
           style={{
             top: '50%',
             left: '50%',
-            boxShadow: '0 0 4px rgba(212,175,55,0.8)',
+            boxShadow: '0 0 6px rgba(212,175,55,1)',
           }}
           animate={{
             x: [
-              Math.cos((i * 2 * Math.PI) / 3) * 38,
-              Math.cos((i * 2 * Math.PI) / 3 + Math.PI) * 38,
-              Math.cos((i * 2 * Math.PI) / 3 + 2 * Math.PI) * 38,
+              Math.cos((i * 2 * Math.PI) / 3) * 45,
+              Math.cos((i * 2 * Math.PI) / 3 + 2 * Math.PI) * 45,
             ],
             y: [
-              Math.sin((i * 2 * Math.PI) / 3) * 38,
-              Math.sin((i * 2 * Math.PI) / 3 + Math.PI) * 38,
-              Math.sin((i * 2 * Math.PI) / 3 + 2 * Math.PI) * 38,
+              Math.sin((i * 2 * Math.PI) / 3) * 45,
+              Math.sin((i * 2 * Math.PI) / 3 + 2 * Math.PI) * 45,
             ],
-            opacity: [0.4, 1, 0.4],
-            scale: [0.8, 1.3, 0.8],
+            opacity: [0, 1, 0],
+            scale: [0.5, 1.5, 0.5],
           }}
           transition={{
-            duration: 4 + i,
+            duration: 3 + i,
             repeat: Infinity,
             ease: 'linear',
           }}
@@ -275,29 +269,11 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 inline-flex items-center gap-3 px-5 py-2 rounded-full glass-dark border-[#D4AF37]/30 text-[#D4AF37] text-sm font-medium tracking-[0.25em] uppercase"
+          className="mb-10 inline-flex items-center gap-3 px-6 py-2.5 rounded-full glass-dark border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold tracking-[0.4em] uppercase shadow-2xl shadow-[#D4AF37]/5"
         >
-          <span className="inline-flex gap-1">
-            {[0, 1, 2].map(i => (
-              <motion.span
-                key={i}
-                className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
-              />
-            ))}
-          </span>
-          <span>Premium Artisan Chocolates</span>
-          <span className="inline-flex gap-1">
-            {[0, 1, 2].map(i => (
-              <motion.span
-                key={i}
-                className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 + 0.5 }}
-              />
-            ))}
-          </span>
+          <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+          <span>EST. 2024 • PREMIUM ARTISAN CHOCOLATES</span>
+          <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
         </motion.div>
 
         {/* Main heading */}
@@ -305,21 +281,20 @@ export function Hero() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-display font-bold leading-[1.05] mb-6 tracking-tight text-[#FFF3E0]"
+          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-display font-black leading-[1.1] mb-6 tracking-tight text-[#FFF3E0] majestic-shadow"
         >
-          Deliver{' '}
+          Deliver <ChocoGlobe />{' '}
           <motion.span
-            className="gold-text-gradient inline-block font-light italic"
-            animate={{ scale: [1, 1.02, 1] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+            className="gold-text-gradient inline-block font-majestic px-2"
+            animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
           >
             Happiness
           </motion.span>
           <br />
-          <span className="text-[#FFF3E0]/60 text-[0.6em] font-light">
-            Worldwide
-          </span>{' '}
-          <ChocoGlobe />
+          <span className="text-[#FFF3E0]/60 text-[0.45em] font-display font-light tracking-[0.2em]">
+            WORLDWIDE
+          </span>
         </motion.h1>
 
         {/* Subtitle */}
@@ -368,16 +343,17 @@ export function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1.3 }}
-          className="mt-16 flex items-center gap-8 text-[#FFF3E0]/40 text-xs tracking-wider uppercase"
+          className="mt-24 flex flex-wrap justify-center items-center gap-x-12 gap-y-4 text-[#FFF3E0]/30 text-[10px] tracking-[0.4em] uppercase"
         >
           {['🇧🇪 Belgium', '🇨🇭 Swiss', '🇫🇷 France', '🇮🇹 Italy'].map((origin, i) => (
             <motion.span
               key={origin}
-              className="flex items-center gap-1.5"
+              className="flex items-center gap-2 hover:text-[#D4AF37]/60 transition-colors cursor-default"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.5 + i * 0.15 }}
             >
+              <span className="w-1 h-1 rounded-full bg-[#D4AF37]/40" />
               {origin}
             </motion.span>
           ))}
@@ -386,13 +362,13 @@ export function Hero() {
 
       {/* Scroll indicator */}
       <motion.div
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2"
+        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2 }}
       >
-        <span className="text-[#D4AF37]/60 text-[10px] tracking-[0.3em] uppercase">Scroll</span>
-        <ChevronDown className="w-5 h-5 text-[#D4AF37]/60 scroll-indicator" />
+        <span className="text-[#D4AF37]/40 text-[9px] tracking-[0.5em] uppercase font-bold">Scroll</span>
+        <ChevronDown className="w-4 h-4 text-[#D4AF37]/40 scroll-indicator" />
       </motion.div>
 
       {/* Liquid drip transition */}

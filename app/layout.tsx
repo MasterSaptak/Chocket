@@ -1,5 +1,5 @@
 import type {Metadata, Viewport} from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Outfit, Cinzel, Cormorant_Garamond } from 'next/font/google';
 import './globals.css'; // Global styles
 import { Toaster } from 'sonner';
 import { Navigation } from '@/components/Navigation';
@@ -11,14 +11,25 @@ import { CursorRipple } from '@/components/CursorRipple';
 import { FloatingCart } from '@/components/FloatingCart';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 
-const inter = Inter({
+const outfit = Outfit({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-outfit',
+  display: 'swap',
 });
 
-const playfair = Playfair_Display({
+const cinzel = Cinzel({
   subsets: ['latin'],
-  variable: '--font-playfair',
+  variable: '--font-cinzel',
+  display: 'swap',
+  weight: ['400', '700', '900'],
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  variable: '--font-cormorant',
+  style: 'italic',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -38,7 +49,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${outfit.variable} ${cinzel.variable} ${cormorant.variable}`}>
       <body className="font-sans antialiased min-h-screen flex flex-col bg-[#0D0705] text-[#FFF3E0]" suppressHydrationWarning>
         <ServiceWorkerRegister />
         <ErrorBoundary>

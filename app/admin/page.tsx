@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
   TrendingUp, DollarSign, AlertCircle, Bell, Search, Menu, LogOut, Plus, Edit, Trash2, Eye, EyeOff, Loader2,
-  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight
+  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { auth } from '@/firebase';
+import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { Product } from '@/components/ProductCard';
@@ -18,6 +18,13 @@ import { OrderDetailsModal } from '@/components/OrderDetailsModal';
 import { ReviewsModal } from '@/components/ReviewsModal';
 import { getAllOrders, updateOrderStatus, updateOrdersStatus, Order, subscribeToOrders } from '@/lib/orders';
 import { seedReviewsIfEmpty } from '@/lib/reviews';
+import { subscribeToUsers, updateUserRole, updateUserStatus } from '@/lib/users';
+import { subscribeToApplications, approveApplication, rejectApplication } from '@/lib/sellerApplications';
+import { useAuth } from '@/components/AuthProvider';
+import { RouteGuard } from '@/components/RouteGuard';
+import { useRouter } from 'next/navigation';
+import { logout } from '@/lib/auth';
+import type { ChocketUser, UserRole, SellerApplication } from '@/types';
 
 const data = [
   { name: 'Mon', sales: 4000, profit: 2400 },
@@ -29,7 +36,8 @@ const data = [
   { name: 'Sun', sales: 3490, profit: 4300 },
 ];
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showBuyingPrice, setShowBuyingPrice] = useState<Record<string, boolean>>({});
@@ -56,6 +64,16 @@ export default function AdminDashboard() {
 
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+
+  // User management state
+  const [allUsers, setAllUsers] = useState<ChocketUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [sellerApplications, setSellerApplications] = useState<SellerApplication[]>([]);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
+  const [applicationFilter, setApplicationFilter] = useState('all');
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectingAppId, setRejectingAppId] = useState<string | null>(null);
+  const { user: currentAuthUser } = useAuth();
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   useEffect(() => {
@@ -69,11 +87,23 @@ export default function AdminDashboard() {
       setIsLoadingOrders(false);
     });
 
+    const unsubscribeUsers = subscribeToUsers((fetchedUsers) => {
+      setAllUsers(fetchedUsers);
+      setIsLoadingUsers(false);
+    });
+
+    const unsubscribeApps = subscribeToApplications((fetchedApps) => {
+      setSellerApplications(fetchedApps);
+      setIsLoadingApplications(false);
+    });
+
     seedReviewsIfEmpty();
 
     return () => {
       unsubscribeProducts();
       unsubscribeOrders();
+      unsubscribeUsers();
+      unsubscribeApps();
     };
   }, []);
 
@@ -210,18 +240,82 @@ export default function AdminDashboard() {
     setIsModalOpen(true);
   };
 
+  // User management handlers
+  const handlePromoteUser = async (uid: string, newRole: UserRole) => {
+    try {
+      await updateUserRole(uid, newRole);
+      toast.success(`User promoted to ${newRole}`);
+    } catch (error) {
+      toast.error('Failed to update user role');
+    }
+  };
+
+  const handleBanUser = async (uid: string) => {
+    try {
+      await updateUserStatus(uid, 'banned');
+      toast.success('User has been banned');
+    } catch (error) {
+      toast.error('Failed to ban user');
+    }
+  };
+
+  const handleActivateUser = async (uid: string) => {
+    try {
+      await updateUserStatus(uid, 'active');
+      toast.success('User has been activated');
+    } catch (error) {
+      toast.error('Failed to activate user');
+    }
+  };
+
+  const handleApproveApp = async (appId: string, userId: string) => {
+    if (!currentAuthUser) return;
+    try {
+      await approveApplication(appId, userId, currentAuthUser.uid);
+      toast.success('Application approved! User is now a seller.');
+    } catch (error) {
+      toast.error('Failed to approve application');
+    }
+  };
+
+  const handleRejectApp = async (appId: string) => {
+    if (!currentAuthUser) return;
+    try {
+      await rejectApplication(appId, currentAuthUser.uid, rejectReason);
+      toast.success('Application rejected');
+      setRejectingAppId(null);
+      setRejectReason('');
+    } catch (error) {
+      toast.error('Failed to reject application');
+    }
+  };
+
+  const filteredApplications = sellerApplications.filter(app => 
+    applicationFilter === 'all' || app.status === applicationFilter
+  );
+
+  const filteredUsers = allUsers.filter(u =>
+    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const pendingApplications = sellerApplications.filter(a => a.status === 'pending').length;
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'orders', label: 'Orders', icon: ShoppingCart },
     { id: 'customers', label: 'Customers', icon: Users },
+    { id: 'usermgmt', label: 'User Management', icon: Shield },
+    { id: 'sellerapps', label: 'Seller Applications', icon: FileText, badge: pendingApplications },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      await logout();
       toast.success('Logged out successfully');
+      router.push('/');
     } catch (error) {
       toast.error('Failed to log out');
     }
@@ -333,6 +427,11 @@ export default function AdminDashboard() {
               >
                 <Icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
+                {(item as any).badge > 0 && (
+                  <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                    {(item as any).badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -1018,6 +1117,258 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* User Management Tab */}
+          {activeTab === 'usermgmt' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-display font-bold text-[#FFF3E0]">User Management</h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-[#FFF3E0]/40">{allUsers.length} total users</span>
+                </div>
+              </div>
+
+              <div className="bg-[#2C1A12]/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-black/20">
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">User</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Email</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Role</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Status</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {isLoadingUsers ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-[#FFF3E0]/60">
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>Loading users...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-8 text-center text-[#FFF3E0]/60">
+                            No users found.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUsers.map((u) => (
+                          <tr key={u.uid} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#1A0F0B] font-bold text-sm">
+                                  {(u.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-[#FFF3E0]">{u.name || 'Unknown'}</p>
+                                  <p className="text-xs text-[#FFF3E0]/40">{u.uid.slice(0, 12)}...</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-sm text-[#FFF3E0]/80">{u.email}</td>
+                            <td className="p-4">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                u.role === 'primeadmin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
+                                u.role === 'admin' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                u.role === 'seller' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20'
+                              }`}>
+                                <Shield className="w-3 h-3" />
+                                {u.role === 'primeadmin' ? 'Prime Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                u.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                                {u.status === 'active' ? <CheckCircle className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
+                                {u.status === 'active' ? 'Active' : 'Banned'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {u.role === 'buyer' && (
+                                  <button
+                                    onClick={() => handlePromoteUser(u.uid, 'seller')}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1"
+                                    title="Promote to Seller"
+                                  >
+                                    <ArrowUpCircle className="w-3 h-3" /> Seller
+                                  </button>
+                                )}
+                                {u.status === 'active' ? (
+                                  <button
+                                    onClick={() => handleBanUser(u.uid)}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20 flex items-center gap-1"
+                                  >
+                                    <Ban className="w-3 h-3" /> Ban
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleActivateUser(u.uid)}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1"
+                                  >
+                                    <CheckCircle className="w-3 h-3" /> Activate
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Seller Applications Tab */}
+          {activeTab === 'sellerapps' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-display font-bold text-[#FFF3E0]">Seller Applications</h2>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={applicationFilter}
+                    onChange={(e) => setApplicationFilter(e.target.value)}
+                    className="bg-[#2C1A12] border border-white/10 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:border-[#D4AF37]/50 text-[#FFF3E0]"
+                  >
+                    <option value="all">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+
+              {isLoadingApplications ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#D4AF37]" />
+                </div>
+              ) : filteredApplications.length === 0 ? (
+                <div className="bg-[#2C1A12]/60 backdrop-blur-md rounded-2xl border border-white/10 p-12 text-center">
+                  <FileText className="w-12 h-12 text-[#FFF3E0]/20 mx-auto mb-4" />
+                  <p className="text-[#FFF3E0]/40">No applications found.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredApplications.map((app) => (
+                    <motion.div
+                      key={app.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className={`bg-[#2C1A12]/60 backdrop-blur-md rounded-2xl border shadow-xl overflow-hidden ${
+                        app.status === 'pending' ? 'border-yellow-500/20' :
+                        app.status === 'approved' ? 'border-emerald-500/20' : 'border-red-500/20'
+                      }`}
+                    >
+                      <div className="p-6">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-[#1A0F0B] font-bold">
+                                {app.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-[#FFF3E0]">{app.fullName}</h3>
+                                <p className="text-xs text-[#FFF3E0]/40">{app.email} • {app.phone}</p>
+                              </div>
+                              <span className={`ml-auto md:ml-4 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${
+                                app.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                app.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                                {app.status === 'pending' ? <Clock className="w-3 h-3" /> :
+                                 app.status === 'approved' ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                              <div className="bg-black/20 rounded-xl p-3">
+                                <p className="text-[10px] text-[#FFF3E0]/40 uppercase tracking-wider mb-1">Location</p>
+                                <p className="text-sm text-[#FFF3E0]/80">{app.location}</p>
+                              </div>
+                              <div className="bg-black/20 rounded-xl p-3">
+                                <p className="text-[10px] text-[#FFF3E0]/40 uppercase tracking-wider mb-1">Platform</p>
+                                <p className="text-sm text-[#FFF3E0]/80">{app.sellingPlatform}</p>
+                              </div>
+                              <div className="bg-black/20 rounded-xl p-3 col-span-2">
+                                <p className="text-[10px] text-[#FFF3E0]/40 uppercase tracking-wider mb-1">Experience</p>
+                                <p className="text-sm text-[#FFF3E0]/80 line-clamp-2">{app.experience}</p>
+                              </div>
+                            </div>
+
+                            {app.identityProof && (
+                              <a
+                                href={app.identityProof}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-xs text-[#D4AF37] hover:underline mt-2"
+                              >
+                                <Eye className="w-3 h-3" /> View Identity Proof
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Actions for pending applications */}
+                          {app.status === 'pending' && (
+                            <div className="flex md:flex-col gap-2 shrink-0">
+                              <button
+                                onClick={() => handleApproveApp(app.id, app.userId)}
+                                className="flex-1 md:flex-none px-4 py-2.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-xl transition-colors font-semibold text-sm flex items-center justify-center gap-2 border border-emerald-500/20"
+                              >
+                                <UserCheck className="w-4 h-4" /> Approve
+                              </button>
+                              {rejectingAppId === app.id ? (
+                                <div className="space-y-2">
+                                  <input
+                                    type="text"
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="Reason (optional)"
+                                    className="w-full px-3 py-2 bg-black/20 border border-red-500/20 rounded-lg text-sm text-[#FFF3E0] placeholder:text-[#FFF3E0]/20 focus:outline-none focus:border-red-500/50"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleRejectApp(app.id)}
+                                      className="flex-1 px-3 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-xs font-semibold border border-red-500/20"
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button
+                                      onClick={() => { setRejectingAppId(null); setRejectReason(''); }}
+                                      className="px-3 py-2 text-[#FFF3E0]/40 hover:text-[#FFF3E0] text-xs font-medium"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setRejectingAppId(app.id)}
+                                  className="flex-1 md:flex-none px-4 py-2.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-xl transition-colors font-semibold text-sm flex items-center justify-center gap-2 border border-red-500/20"
+                                >
+                                  <UserX className="w-4 h-4" /> Reject
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-4xl">
@@ -1115,5 +1466,13 @@ export default function AdminDashboard() {
         product={selectedProductForReviews}
       />
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <RouteGuard allowedRoles={['admin', 'primeadmin']}>
+      <AdminDashboardContent />
+    </RouteGuard>
   );
 }

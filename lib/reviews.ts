@@ -1,4 +1,4 @@
-import { db } from '@/firebase';
+import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, query, where, orderBy, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 export interface Review {
