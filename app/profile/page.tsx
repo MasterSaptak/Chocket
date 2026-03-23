@@ -60,13 +60,27 @@ export default function ProfilePage() {
       console.log('Updating Auth profile for:', name);
       await updateProfile(user, { displayName: name });
 
-      // 2. Update Firestore user document
+      // 2. Update Firestore user document with timeout for hung connection edge-cases
       console.log('Updating Firestore profile for:', user.uid);
-      await updateUserProfile(user.uid, { 
+      const updatePromise = updateUserProfile(user.uid, { 
         name: name || '', 
         phone: phone || '', 
         dob: dob || '' 
       });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 5000)
+      );
+
+      try {
+        await Promise.race([updatePromise, timeoutPromise]);
+      } catch (err: any) {
+        if (err.message === 'timeout') {
+          console.warn('Firestore update delayed by network, queued for background sync.');
+        } else {
+          throw err;
+        }
+      }
 
       toast.success('Profile updated successfully! ✨');
     } catch (error: any) {

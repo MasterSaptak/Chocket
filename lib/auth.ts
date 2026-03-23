@@ -175,6 +175,6 @@ export function getDashboardPath(role: UserRole): string {
       return '/seller/dashboard';
     case 'buyer':
     default:
-      return '/';
+      return '/profile';
   }
 }

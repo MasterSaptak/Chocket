@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ArrowRight, ChevronLeft, Shield, Package } from 'lucide-react';
 import { toast } from 'sonner';
-import { registerWithEmail, loginWithEmail, signInWithGoogle, getDashboardPath, getUserRole } from '@/lib/auth';
+import { registerWithEmail, loginWithEmail, signInWithGoogle, getDashboardPath, getUserRole, logout } from '@/lib/auth';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
 
@@ -13,7 +13,7 @@ export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { user, role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const router = useRouter();
 
   // Form state
@@ -26,52 +26,37 @@ export default function AuthPage() {
 
   // Unified Redirection Logic
   useEffect(() => {
-    // If user is already logged in, we shouldn't show the form spinner forever
-    if (user && isLoading) {
-      setIsLoading(false);
-    }
-
     if (user && role) {
       if (!user.emailVerified && role !== 'primeadmin' && role !== 'admin') {
         router.push('/verify-email');
-      } else {
-        router.push(getDashboardPath(role));
       }
-    } else if (user && !role) {
-      // Emergency Fallback: If role is still null after 500ms, 
-      // we check existence. If offline or error, we redirect to HOME as safety.
+    } else if (user && !role && !authLoading) {
+      // Self-healing mechanism: If Google Auth popup promise hangs completely due to Next.js COOP bugs,
+      // auth propagates via indexedDB causing user=truthy, but createUserDocument never ran.
       const timer = setTimeout(async () => {
         try {
           const manualRole = await getUserRole(user.uid);
-          if (manualRole) {
-            router.push(getDashboardPath(manualRole));
-          } else {
-            console.log('Role not found manually, creating default profile...');
+          if (!manualRole) {
+            console.log('Self-healing missing profile...');
             const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
             await setDoc(doc(db, 'users', user.uid), {
               uid: user.uid,
-              name: user.displayName || 'User',
+              name: user.displayName || 'Chocolate Lover',
               email: user.email || '',
               phone: '',
               role: 'buyer',
               status: 'active',
-              isVerified: true,
+              isVerified: user.emailVerified || false,
               createdAt: serverTimestamp()
             }, { merge: true });
           }
         } catch (err: any) {
-          console.error('Redirection/Fetch error:', err);
-          // If offline or rule error, just move to Home. 
-          // Better to see the home page than a syncing screen.
-          if (err.message?.includes('offline') || err.code === 'permission-denied') {
-            toast.error('Connection issue, taking you to Home...');
-            router.push('/');
-          }
+          console.error('Fast-heal error:', err);
         }
-      }, 1500); // 1.5s delay for a more natural feel
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [user, role, router, isLoading]);
+  }, [user, role, router, authLoading]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,29 +84,50 @@ export default function AuthPage() {
         }
 
         toast.success('Welcome back! 🍫');
-        if (userRole) {
-          router.push(getDashboardPath(userRole));
-          return;
-        }
-        router.push('/');
+        setIsLoading(false);
       }
     } catch (error: any) {
-      const message = error.message || 'Authentication failed.';
+      let message = error.message || 'Authentication failed.';
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        message = 'Invalid email or password. Please try again.';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Too many failed attempts. Please try again later.';
+      } else if (error.message?.includes('offline')) {
+        message = 'You appear to be offline. Please check your connection.';
+      }
+      
       toast.error(message);
       setIsLoading(false);
+      await logout().catch(() => {});
     }
   };
 
   const handleGoogleAuth = async () => {
     setIsLoading(true);
     try {
-      await signInWithGoogle();
-      // Page will redirect, code below here won't execute in current session
+      const firebaseUser = await signInWithGoogle();
+      const userRole = await getUserRole(firebaseUser.uid);
+      
+      if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'admin') {
+        router.push('/verify-email');
+        setIsLoading(false);
+        return;
+      }
+      
+      toast.success('Welcome back! 🍫');
+      setIsLoading(false);
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user') {
-        toast.error(error.message || 'Google sign-in failed.');
+        let message = error.message || 'Google sign-in failed.';
+        if (error.code === 'auth/popup-blocked') {
+          message = 'Sign-in popup was blocked. Please allow popups.';
+        } else if (error.message?.includes('offline')) {
+          message = 'You appear to be offline. Please check your connection.';
+        }
+        toast.error(message);
       }
       setIsLoading(false);
+      await logout().catch(() => {});
     }
   };
 
@@ -140,7 +146,7 @@ export default function AuthPage() {
         </div>
 
         <AnimatePresence mode="wait">
-          {user && !role ? (
+          {authLoading ? (
             <motion.div
               key="loading-card"
               initial={{ opacity: 0 }}
@@ -157,6 +163,30 @@ export default function AuthPage() {
               >
                 Click here if stuck
               </button>
+            </motion.div>
+          ) : user ? (
+            <motion.div
+              key="welcome-card"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#1A0F0B]/80 backdrop-blur-xl border border-[#3E2723] rounded-2xl p-10 shadow-2xl text-center"
+            >
+              <div className="w-20 h-20 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#D4AF37]/20">
+                <User className="w-10 h-10 text-[#D4AF37]" />
+              </div>
+              <h2 className="text-3xl font-display font-bold text-[#FFF3E0] mb-2">Welcome Back!</h2>
+              <p className="text-[#FFF3E0]/60 text-sm mb-8">
+                You are successfully signed in as <strong className="text-[#D4AF37]">{user.displayName || user.email?.split('@')[0]}</strong>.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => router.push(getDashboardPath(role || 'buyer'))}
+                  className="py-4 px-8 bg-[#D4AF37] text-[#1A0F0B] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#F9F295] transition-all hover:scale-105 active:scale-95"
+                >
+                  Proceed to Profile <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </motion.div>
           ) : view === 'auth' ? (
             <motion.div

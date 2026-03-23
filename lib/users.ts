@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -51,13 +52,12 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
   await updateDoc(userRef, { status });
 }
 
-// ===== UPDATE USER PROFILE =====
 export async function updateUserProfile(
   uid: string,
   data: Partial<Pick<ChocketUser, 'name' | 'phone' | 'profileImage' | 'dob'>>
 ): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, uid);
-  await updateDoc(userRef, data);
+  await setDoc(userRef, data, { merge: true });
 }
 
 // ===== GET USERS BY ROLE =====
