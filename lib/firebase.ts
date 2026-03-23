@@ -2,7 +2,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, persistentLocalCache } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Firebase configuration from environment variables
@@ -19,7 +19,24 @@ const firebaseConfig = {
 // Initialize Firebase (singleton pattern for Next.js)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
-const db = getFirestore(app);
+
+let db: ReturnType<typeof getFirestore>;
+
+if (typeof window !== "undefined") {
+  try {
+    // Enable offline persistence exclusively in the browser securely.
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache()
+    });
+  } catch (error) {
+    // If already initialized (e.g. by fast-refresh) or other errors, fallback to standard retrieval.
+    db = getFirestore(app);
+  }
+} else {
+  // SSR fallback
+  db = getFirestore(app);
+}
+
 const storage = getStorage(app);
 
 // Initialize Analytics conditionally (only runs on browser)

@@ -23,14 +23,17 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState('');
 
-  // Sync state with userData
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize state precisely once from userData so we never overwrite their active typing
   useEffect(() => {
-    if (userData) {
+    if (userData && !isInitialized) {
       setName(userData.name || '');
       setPhone(userData.phone || '');
       setDob(userData.dob || '');
+      setIsInitialized(true);
     }
-  }, [userData]);
+  }, [userData, isInitialized]);
 
   // Auto-refresh verification status
   useEffect(() => {
