@@ -453,7 +453,7 @@ function SellerDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0705] text-[#FFF3E0]">
+    <div className="h-screen overflow-y-auto w-full relative bg-[#0D0705] text-[#FFF3E0]">
       {/* ===== HEADER ===== */}
       <header className="sticky top-0 z-40 bg-[#1A0F0B]/90 backdrop-blur-xl border-b border-[#3E2723]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

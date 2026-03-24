@@ -3,6 +3,7 @@ import { Outfit, Cinzel, Cormorant_Garamond } from 'next/font/google';
 import './globals.css'; // Global styles
 import { Toaster } from 'sonner';
 import { Navigation } from '@/components/Navigation';
+import { MainContent } from '@/components/MainContent';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/components/AuthProvider';
 import { CartProvider } from '@/components/CartProvider';
@@ -58,9 +59,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
               <LoadingScreen />
               <CursorRipple />
               <Navigation />
-              <main className="flex-1 pt-20 pb-24 md:pt-24 md:pb-0">
+              <MainContent>
                 {children}
-              </main>
+              </MainContent>
               <FloatingCart />
               <Toaster 
                 position="top-center" 

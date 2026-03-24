@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
   TrendingUp, DollarSign, AlertCircle, Bell, Search, Menu, LogOut, Plus, Edit, Trash2, Eye, EyeOff, Loader2,
-  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText
+  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText, ArrowLeft
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
@@ -73,7 +73,7 @@ function AdminDashboardContent() {
   const [applicationFilter, setApplicationFilter] = useState('all');
   const [rejectReason, setRejectReason] = useState('');
   const [rejectingAppId, setRejectingAppId] = useState<string | null>(null);
-  const { user: currentAuthUser } = useAuth();
+  const { user: currentAuthUser, userData } = useAuth();
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   useEffect(() => {
@@ -399,19 +399,35 @@ function AdminDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1A0F0B] text-[#FFF3E0] flex font-sans selection:bg-[#D4AF37] selection:text-[#1A0F0B]">
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#2C1A12] border-r border-white/10 transform transition-transform duration-300 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-6 flex items-center justify-between">
-          <h1 className="text-2xl font-display font-bold text-[#FFF3E0] tracking-tight">
-            Chocket<span className="text-[#D4AF37]">Admin</span>
-          </h1>
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-[#FFF3E0]/60 hover:text-[#D4AF37]">
-            <Menu className="w-5 h-5" />
+    <div className="h-screen overflow-hidden bg-[#0D0705] text-[#FFF3E0] flex font-sans selection:bg-[#D4AF37] selection:text-[#1A0F0B]">
+      {/* Prime Admin Luxury Sidebar */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 h-screen bg-[#1A0F0B] border-r border-[#3E2723] transform transition-transform duration-300 flex flex-col shadow-2xl shadow-black/50 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-6 relative">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <div>
+              <h1 className="text-2xl font-display font-bold text-[#FFF3E0] tracking-tight flex items-center gap-2">
+                <Shield className="w-6 h-6 text-[#D4AF37]" />
+                Chocket<span className="text-[#D4AF37]">Admin</span>
+              </h1>
+              <p className="text-[10px] text-[#D4AF37] uppercase tracking-wider font-semibold mt-1">Prime Command Center</p>
+            </div>
+            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-[#FFF3E0]/60 hover:text-[#D4AF37] bg-white/5 rounded-lg">
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <button 
+            onClick={() => router.push('/')}
+            className="w-full relative z-10 flex items-center gap-3 px-4 py-3 bg-[#0D0705]/60 hover:bg-[#D4AF37]/10 text-[#FFF3E0]/80 hover:text-[#D4AF37] border border-[#3E2723] rounded-xl transition-all group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-bold uppercase tracking-wider">Back to Store</span>
           </button>
         </div>
 
-        <nav className="px-4 space-y-2 mt-8 flex-1">
+        <nav className="px-4 space-y-2 mt-4 flex-1 overflow-y-auto hide-scrollbar relative z-10">
+          <div className="text-[10px] font-bold text-[#FFF3E0]/30 uppercase tracking-widest px-4 mb-4">Core Modules</div>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -419,16 +435,16 @@ function AdminDashboardContent() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 font-semibold text-sm ${
                   isActive 
-                    ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 shadow-[0_0_15px_rgba(212,175,55,0.1)]' 
-                    : 'text-[#FFF3E0]/60 hover:bg-white/5 hover:text-[#FFF3E0]'
+                    ? 'bg-gradient-to-r from-[#D4AF37]/20 to-transparent text-[#D4AF37] border-l-2 border-[#D4AF37] shadow-lg shadow-[#D4AF37]/5' 
+                    : 'text-[#FFF3E0]/50 hover:bg-white/5 hover:text-[#FFF3E0] border-l-2 border-transparent'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[#D4AF37]' : 'text-[#FFF3E0]/40'}`} />
+                <span>{item.label}</span>
                 {(item as any).badge > 0 && (
-                  <span className="ml-auto w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  <span className={`ml-auto w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center ${isActive ? 'bg-[#D4AF37] text-[#1A0F0B]' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
                     {(item as any).badge}
                   </span>
                 )}
@@ -437,19 +453,28 @@ function AdminDashboardContent() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-6 border-t border-[#3E2723] relative z-10">
+          <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center shadow-lg shadow-[#D4AF37]/20 text-[#1A0F0B] font-bold">
+              {currentAuthUser?.email?.charAt(0).toUpperCase() || 'P'}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold text-[#FFF3E0] truncate">{currentAuthUser?.displayName || 'Prime Admin'}</p>
+              <p className="text-[10px] text-[#FFF3E0]/40 capitalize">{userData?.role || 'Prime Admin'}</p>
+            </div>
+          </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-red-400 hover:bg-red-400/10"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all duration-300 text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40 uppercase tracking-widest text-xs font-bold"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
+            <LogOut className="w-4 h-4" />
+            System Logout
           </button>
         </div>
       </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative h-screen">
         {/* Background Texture */}
         <div className="absolute inset-0 z-0 opacity-[0.02] pointer-events-none bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')]" />
 
