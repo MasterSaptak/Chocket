@@ -9,6 +9,7 @@ import { useCart } from './CartProvider';
 import { useAuth } from './AuthProvider';
 import { SoundToggle } from './SoundToggle';
 import { logout } from '@/lib/auth';
+import { getRoleDisplayName, getRoleColor } from '@/lib/rbac';
 import { toast } from 'sonner';
 
 export function Navigation() {
@@ -105,13 +106,13 @@ export function Navigation() {
                 Seller
               </Link>
             )}
-            {(role === 'admin' || role === 'primeadmin') && (
+            {(role === 'manager' || role === 'primeadmin') && (
               <Link
                 href="/admin"
                 className="text-sm font-medium text-blue-400/70 hover:text-blue-400 transition-all duration-300 flex items-center gap-1"
               >
                 <Shield className="w-3.5 h-3.5" />
-                Admin
+                Manager
               </Link>
             )}
             {role === 'primeadmin' && (
@@ -120,7 +121,7 @@ export function Navigation() {
                 className="text-sm font-medium text-purple-400/70 hover:text-purple-400 transition-all duration-300 flex items-center gap-1"
               >
                 <Crown className="w-3.5 h-3.5" />
-                Super
+                Prime Admin
               </Link>
             )}
           </nav>
@@ -213,7 +214,7 @@ export function Navigation() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm transition-all border-2 ${
                     role === 'primeadmin' ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white border-purple-400/50' :
-                    role === 'admin' ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white border-blue-400/50' :
+                    role === 'manager' ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white border-blue-400/50' :
                     role === 'seller' ? 'bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-emerald-400/50' :
                     'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#1A0F0B] border-[#D4AF37]/50'
                   } hover:scale-110`}
@@ -244,12 +245,12 @@ export function Navigation() {
                           <div className="flex flex-wrap gap-2 mt-3">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                               role === 'primeadmin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-sm shadow-purple-500/10' :
-                              role === 'admin' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-sm shadow-blue-500/10' :
+                              role === 'manager' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-sm shadow-blue-500/10' :
                               role === 'seller' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/10' :
                               'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20 shadow-sm shadow-[#D4AF37]/10'
                             }`}>
                               <Shield className="w-2.5 h-2.5" />
-                              {role === 'primeadmin' ? 'Prime Admin' : (role || 'buyer').charAt(0).toUpperCase() + (role || 'buyer').slice(1)}
+                              {getRoleDisplayName(role)}
                             </span>
                             
                             {!user.emailVerified && (
@@ -276,16 +277,16 @@ export function Navigation() {
                               <Store className="w-4 h-4" /> Seller Dashboard
                             </Link>
                           )}
-                          {(role === 'admin' || role === 'primeadmin') && (
+                          {(role === 'manager' || role === 'primeadmin') && (
                             <Link href="/admin" onClick={() => setShowUserMenu(false)}
                               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-blue-400/70 hover:text-blue-400 hover:bg-blue-500/5 transition-colors text-sm">
-                              <Shield className="w-4 h-4" /> Admin Dashboard
+                              <Shield className="w-4 h-4" /> Manager Dashboard
                             </Link>
                           )}
                           {role === 'primeadmin' && (
                             <Link href="/superadmin/dashboard" onClick={() => setShowUserMenu(false)}
                               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-purple-400/70 hover:text-purple-400 hover:bg-purple-500/5 transition-colors text-sm">
-                              <Crown className="w-4 h-4" /> Super Admin
+                              <Crown className="w-4 h-4" /> Prime Admin
                             </Link>
                           )}
                           <div className="my-1 border-t border-[#3E2723]" />

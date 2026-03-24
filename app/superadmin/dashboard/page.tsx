@@ -11,6 +11,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { RouteGuard } from '@/components/RouteGuard';
 import { logout } from '@/lib/auth';
 import { subscribeToUsers, updateUserRole, updateUserStatus } from '@/lib/users';
+import { getRoleDisplayName, getRoleColor, getAllowedPromotionTargets, isSuperAdmin } from '@/lib/rbac';
+import { logAction } from '@/lib/audit';
 import { toast } from 'sonner';
 import type { ChocketUser, UserRole } from '@/types';
 
@@ -42,9 +44,17 @@ function SuperAdminContent() {
   };
 
   const handlePromote = async (uid: string, newRole: UserRole) => {
+    if (!userData) return;
     try {
       await updateUserRole(uid, newRole);
-      toast.success(`User promoted to ${newRole === 'primeadmin' ? 'Prime Admin' : newRole}`);
+      await logAction({
+        action: `promote_user_to_${newRole}`,
+        performedBy: userData.uid,
+        role: 'primeadmin',
+        targetId: uid,
+        bypass: true,
+      });
+      toast.success(`User promoted to ${getRoleDisplayName(newRole)}`);
       setPromotingUser(null);
     } catch (error) {
       toast.error('Failed to promote user');
@@ -52,8 +62,16 @@ function SuperAdminContent() {
   };
 
   const handleBan = async (uid: string) => {
+    if (!userData) return;
     try {
       await updateUserStatus(uid, 'banned');
+      await logAction({
+        action: 'ban_user',
+        performedBy: userData.uid,
+        role: 'primeadmin',
+        targetId: uid,
+        bypass: true,
+      });
       toast.success('User banned');
     } catch {
       toast.error('Failed to ban user');
@@ -61,8 +79,16 @@ function SuperAdminContent() {
   };
 
   const handleActivate = async (uid: string) => {
+    if (!userData) return;
     try {
       await updateUserStatus(uid, 'active');
+      await logAction({
+        action: 'activate_user',
+        performedBy: userData.uid,
+        role: 'primeadmin',
+        targetId: uid,
+        bypass: true,
+      });
       toast.success('User activated');
     } catch {
       toast.error('Failed to activate user');
@@ -81,26 +107,22 @@ function SuperAdminContent() {
     total: users.length,
     buyers: users.filter((u) => u.role === 'buyer').length,
     sellers: users.filter((u) => u.role === 'seller').length,
-    admins: users.filter((u) => u.role === 'admin').length,
-    primeadmins: users.filter((u) => u.role === 'primeadmin').length,
+    managers: users.filter((u) => u.role === 'manager').length,
+    super_admins: users.filter((u) => u.role === 'primeadmin').length,
     banned: users.filter((u) => u.status === 'banned').length,
   };
 
   const getRoleBadge = (role: UserRole) => {
-    const cfg: Record<UserRole, { bg: string; text: string; border: string; label: string }> = {
-      buyer: { bg: 'bg-[#D4AF37]/10', text: 'text-[#D4AF37]', border: 'border-[#D4AF37]/20', label: 'Buyer' },
-      seller: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', label: 'Seller' },
-      admin: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', label: 'Admin' },
-      primeadmin: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20', label: 'Prime Admin' },
-    };
-    const c = cfg[role];
+    const c = getRoleColor(role);
     return (
       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${c.bg} ${c.text} ${c.border}`}>
         {role === 'primeadmin' ? <Crown className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
-        {c.label}
+        {getRoleDisplayName(role)}
       </span>
     );
   };
+
+  const promotionTargets = getAllowedPromotionTargets('primeadmin');
 
   return (
     <div className="min-h-screen bg-[#0D0705] text-[#FFF3E0]">
@@ -113,7 +135,7 @@ function SuperAdminContent() {
             </div>
             <div>
               <h1 className="text-xl font-display font-bold text-[#FFF3E0]">
-                Super <span className="text-purple-400">Admin</span>
+                Prime <span className="text-purple-400">Admin</span>
               </h1>
               <p className="text-xs text-[#FFF3E0]/40">
                 Welcome, {userData?.name || 'Prime Admin'}
@@ -126,7 +148,7 @@ function SuperAdminContent() {
               className="px-4 py-2 text-sm font-medium text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-xl transition-colors flex items-center gap-2"
             >
               <ChevronRight className="w-4 h-4 rotate-180" />
-              Admin Dashboard
+              Manager Dashboard
             </button>
             <button
               onClick={handleLogout}
@@ -146,8 +168,8 @@ function SuperAdminContent() {
             { label: 'Total Users', value: stats.total, color: 'from-[#D4AF37]/20 to-[#D4AF37]/5' },
             { label: 'Buyers', value: stats.buyers, color: 'from-[#D4AF37]/20 to-[#D4AF37]/5' },
             { label: 'Sellers', value: stats.sellers, color: 'from-emerald-500/20 to-emerald-500/5' },
-            { label: 'Admins', value: stats.admins, color: 'from-blue-500/20 to-blue-500/5' },
-            { label: 'Prime Admins', value: stats.primeadmins, color: 'from-purple-500/20 to-purple-500/5' },
+            { label: 'Managers', value: stats.managers, color: 'from-blue-500/20 to-blue-500/5' },
+            { label: 'Prime Admins', value: stats.super_admins, color: 'from-purple-500/20 to-purple-500/5' },
             { label: 'Banned', value: stats.banned, color: 'from-red-500/20 to-red-500/5' },
           ].map((s, i) => (
             <motion.div
@@ -167,10 +189,10 @@ function SuperAdminContent() {
         <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-purple-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-purple-400">Super Admin Privileges</p>
+            <p className="text-sm font-semibold text-purple-400">Prime Admin Privileges</p>
             <p className="text-xs text-[#FFF3E0]/50 mt-1">
-              You have full control over user roles. Only Prime Admins can promote users to Admin or Prime Admin.
-              Use this power responsibly.
+              You have full control over user roles. Only Prime Admins can promote users to Manager or Prime Admin.
+              All actions are audit-logged. Use this power responsibly.
             </p>
           </div>
         </div>
@@ -195,7 +217,7 @@ function SuperAdminContent() {
             <option value="all">All Roles</option>
             <option value="buyer">Buyers</option>
             <option value="seller">Sellers</option>
-            <option value="admin">Admins</option>
+            <option value="manager">Managers</option>
             <option value="primeadmin">Prime Admins</option>
           </select>
         </div>
@@ -205,7 +227,7 @@ function SuperAdminContent() {
           <div className="p-5 border-b border-[#3E2723] flex items-center justify-between">
             <div>
               <h2 className="text-lg font-display font-bold text-[#FFF3E0]">All Users</h2>
-              <p className="text-xs text-[#FFF3E0]/40 mt-1">Manage roles and permissions</p>
+              <p className="text-xs text-[#FFF3E0]/40 mt-1">Manage roles, permissions & audit all actions</p>
             </div>
             <span className="text-xs text-[#FFF3E0]/30">{filteredUsers.length} results</span>
           </div>
@@ -235,101 +257,105 @@ function SuperAdminContent() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => (
-                    <tr key={u.uid} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                            u.role === 'primeadmin' ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white' :
-                            u.role === 'admin' ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white' :
-                            'bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#1A0F0B]'
+                  filteredUsers.map((u) => {
+                    const roleColors = getRoleColor(u.role);
+                    return (
+                      <tr key={u.uid} className="hover:bg-white/5 transition-colors group">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-gradient-to-br ${roleColors.gradient} text-white`}>
+                              {(u.name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium text-[#FFF3E0]">{u.name || 'Unknown'}</p>
+                              <p className="text-[10px] text-[#FFF3E0]/30 font-mono">{u.uid.slice(0, 16)}...</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-[#FFF3E0]/70">{u.email}</td>
+                        <td className="px-5 py-4">{getRoleBadge(u.role)}</td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                            u.status === 'active'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-400 border-red-500/20'
                           }`}>
-                            {(u.name || 'U').charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-[#FFF3E0]">{u.name || 'Unknown'}</p>
-                            <p className="text-[10px] text-[#FFF3E0]/30 font-mono">{u.uid.slice(0, 16)}...</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-[#FFF3E0]/70">{u.email}</td>
-                      <td className="px-5 py-4">{getRoleBadge(u.role)}</td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                          u.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
-                        }`}>
-                          {u.status === 'active' ? <CheckCircle className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
-                          {u.status === 'active' ? 'Active' : 'Banned'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Promotion buttons - only for Prime Admin */}
-                          {promotingUser === u.uid ? (
-                            <AnimatePresence>
-                              <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="flex items-center gap-1"
-                              >
-                                {u.role === 'buyer' && (
-                                  <button onClick={() => handlePromote(u.uid, 'seller')}
-                                    className="px-2 py-1 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20">
-                                    Seller
+                            {u.status === 'active' ? <CheckCircle className="w-3 h-3" /> : <Ban className="w-3 h-3" />}
+                            {u.status === 'active' ? 'Active' : 'Banned'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {promotingUser === u.uid ? (
+                              <AnimatePresence>
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  className="flex items-center gap-1"
+                                >
+                                  {u.role !== 'seller' && (
+                                    <button onClick={() => handlePromote(u.uid, 'seller')}
+                                      className="px-2 py-1 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20">
+                                      Seller
+                                    </button>
+                                  )}
+                                  {u.role !== 'manager' && (
+                                    <button onClick={() => handlePromote(u.uid, 'manager')}
+                                      className="px-2 py-1 text-[10px] font-bold bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20 hover:bg-blue-500/20">
+                                      Manager
+                                    </button>
+                                  )}
+                                  {u.role !== 'primeadmin' && (
+                                    <button onClick={() => handlePromote(u.uid, 'primeadmin')}
+                                      className="px-2 py-1 text-[10px] font-bold bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20 hover:bg-purple-500/20">
+                                      Prime Admin
+                                    </button>
+                                  )}
+                                  {u.role !== 'buyer' && (
+                                    <button onClick={() => handlePromote(u.uid, 'buyer')}
+                                      className="px-2 py-1 text-[10px] font-bold bg-[#D4AF37]/10 text-[#D4AF37] rounded-lg border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20">
+                                      Buyer
+                                    </button>
+                                  )}
+                                  <button onClick={() => setPromotingUser(null)}
+                                    className="px-2 py-1 text-[10px] text-[#FFF3E0]/40 hover:text-[#FFF3E0]">
+                                    ✕
                                   </button>
-                                )}
-                                {(u.role === 'buyer' || u.role === 'seller') && (
-                                  <button onClick={() => handlePromote(u.uid, 'admin')}
-                                    className="px-2 py-1 text-[10px] font-bold bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20 hover:bg-blue-500/20">
-                                    Admin
-                                  </button>
-                                )}
+                                </motion.div>
+                              </AnimatePresence>
+                            ) : (
+                              <>
                                 {u.role !== 'primeadmin' && (
-                                  <button onClick={() => handlePromote(u.uid, 'primeadmin')}
-                                    className="px-2 py-1 text-[10px] font-bold bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20 hover:bg-purple-500/20">
-                                    Prime
+                                  <button
+                                    onClick={() => setPromotingUser(u.uid)}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors border border-purple-500/20 flex items-center gap-1"
+                                  >
+                                    <ArrowUpCircle className="w-3 h-3" /> Promote
                                   </button>
                                 )}
-                                <button onClick={() => setPromotingUser(null)}
-                                  className="px-2 py-1 text-[10px] text-[#FFF3E0]/40 hover:text-[#FFF3E0]">
-                                  ✕
-                                </button>
-                              </motion.div>
-                            </AnimatePresence>
-                          ) : (
-                            <>
-                              {u.role !== 'primeadmin' && (
-                                <button
-                                  onClick={() => setPromotingUser(u.uid)}
-                                  className="px-3 py-1.5 text-xs font-semibold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors border border-purple-500/20 flex items-center gap-1"
-                                >
-                                  <ArrowUpCircle className="w-3 h-3" /> Promote
-                                </button>
-                              )}
-                              {u.status === 'active' ? (
-                                <button
-                                  onClick={() => handleBan(u.uid)}
-                                  className="px-3 py-1.5 text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20 flex items-center gap-1"
-                                >
-                                  <Ban className="w-3 h-3" /> Ban
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleActivate(u.uid)}
-                                  className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1"
-                                >
-                                  <UserCheck className="w-3 h-3" /> Activate
-                                </button>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                                {u.status === 'active' ? (
+                                  <button
+                                    onClick={() => handleBan(u.uid)}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20 flex items-center gap-1"
+                                  >
+                                    <Ban className="w-3 h-3" /> Ban
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleActivate(u.uid)}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1"
+                                  >
+                                    <UserCheck className="w-3 h-3" /> Activate
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

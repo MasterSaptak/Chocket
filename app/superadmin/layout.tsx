@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { Loader2, Crown } from 'lucide-react';
-import { canAccessSuperAdmin } from '@/lib/auth';
+import { canAccessSuperAdminDashboard } from '@/lib/rbac';
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const { user, userData, loading } = useAuth();
@@ -15,7 +15,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       <div className="min-h-screen flex items-center justify-center bg-[#0D0705]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-purple-400" />
-          <p className="text-[#FFF3E0]/50 text-sm">Verifying super admin access...</p>
+          <p className="text-[#FFF3E0]/50 text-sm">Verifying Prime Admin access...</p>
         </div>
       </div>
     );
@@ -28,8 +28,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
           <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto">
             <Crown className="w-8 h-8 text-purple-400" />
           </div>
-          <h2 className="text-2xl font-display font-bold text-purple-400">Super Admin Access</h2>
-          <p className="text-[#FFF3E0]/50 text-sm">Please sign in to access the super admin dashboard.</p>
+          <h2 className="text-2xl font-display font-bold text-purple-400">Prime Admin Access</h2>
+          <p className="text-[#FFF3E0]/50 text-sm">Please sign in to access the Prime Admin dashboard.</p>
           <button
             onClick={() => router.push('/auth')}
             className="mt-4 px-6 py-3 bg-purple-500/10 text-purple-400 rounded-xl font-semibold hover:bg-purple-500/20 transition-colors border border-purple-500/20"
@@ -41,7 +41,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     );
   }
 
-  if (userData && !canAccessSuperAdmin(userData.role)) {
+  if (userData && !canAccessSuperAdminDashboard(userData.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D0705] p-4">
         <div className="max-w-md w-full bg-[#1A0F0B] border border-red-500/30 rounded-2xl p-8 text-center space-y-4">

@@ -1173,12 +1173,12 @@ function AdminDashboardContent() {
                             <td className="p-4">
                               <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${
                                 u.role === 'primeadmin' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                u.role === 'admin' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                u.role === 'manager' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                                 u.role === 'seller' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                                 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20'
                               }`}>
                                 <Shield className="w-3 h-3" />
-                                {u.role === 'primeadmin' ? 'Prime Admin' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                                {u.role === 'primeadmin' ? 'Prime Admin' : u.role === 'manager' ? 'Manager' : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
                               </span>
                             </td>
                             <td className="p-4">
@@ -1471,7 +1471,7 @@ function AdminDashboardContent() {
 
 export default function AdminDashboard() {
   return (
-    <RouteGuard allowedRoles={['admin', 'primeadmin']}>
+    <RouteGuard allowedRoles={['manager', 'primeadmin']}>
       <AdminDashboardContent />
     </RouteGuard>
   );

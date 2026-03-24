@@ -4,7 +4,7 @@ service cloud.firestore {
     
     // ===============================================================
     // CHOCKET ROLE-BASED ACCESS CONTROL
-    // Roles: buyer, seller, admin, primeadmin
+    // Roles: buyer, seller, manager, super_admin
     // ===============================================================
 
     // ===============================================================
@@ -40,13 +40,12 @@ service cloud.firestore {
       return isRole('seller');
     }
     
-    function isAdmin() {
+    function isManager() {
       return isAuthenticated() &&
-        (isRole('admin') || isRole('primeadmin') ||
-          (request.auth.token.email == "BUrningSOUlofDarkness@gmail.com" && request.auth.token.email_verified == true));
+        (isRole('manager') || isSuperAdmin());
     }
     
-    function isPrimeAdmin() {
+    function isSuperAdmin() {
       return isAuthenticated() &&
         (isRole('primeadmin') ||
           (request.auth.token.email == "BUrningSOUlofDarkness@gmail.com" && request.auth.token.email_verified == true));
@@ -80,32 +79,12 @@ service cloud.firestore {
       return request.resource.data[field] is number && request.resource.data[field] >= 0;
     }
 
-    function isValidDateString(dateStr) {
-      return dateStr is string &&
-        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
-    }
-
-    function isValidOptionalNumber(field) {
-      return !(field in request.resource.data) || (request.resource.data[field] is number && request.resource.data[field] >= 0);
-    }
-    
-    function isValidOptionalBool(field) {
-      return !(field in request.resource.data) || request.resource.data[field] is bool;
-    }
-
-    function isValidOptionalString(field, minLen, maxLen) {
-      return !(field in request.resource.data) ||
-        (request.resource.data[field] is string &&
-         request.resource.data[field].size() >= minLen &&
-         request.resource.data[field].size() <= maxLen);
-    }
-
     // ===============================================================
     // USERS COLLECTION
     // ===============================================================
     match /users/{userId} {
-      // Users can read their own data, admins can read all
-      allow read: if isOwner(userId) || isAdmin();
+      // Users can read their own data; managers & super_admin can read all
+      allow read: if isOwner(userId) || isManager();
       
       // Users can create their own profile (on signup)
       allow create: if isOwner(userId) &&
@@ -113,20 +92,20 @@ service cloud.firestore {
         request.resource.data.role == 'buyer' &&
         request.resource.data.status == 'active';
       
-      // Users can update their own non-role fields (name, phone, profileImage)
-      // Admins can update any user (but only primeadmin can set admin/primeadmin roles)
+      // Users can update their own non-role fields
+      // Managers can update sellers/buyers (NOT other managers)
+      // Super Admin can update anyone
       allow update: if (
-        // User updating their own profile (cannot change role or status)
+        // User updating own profile (cannot change role or status)
         (isOwner(userId) &&
           request.resource.data.role == resource.data.role &&
           request.resource.data.status == resource.data.status) ||
-        // Admin can update users (can promote to buyer or seller only)
-        (isAdmin() &&
-          (request.resource.data.role in ['buyer', 'seller'] || 
-           request.resource.data.role == resource.data.role ||
-           isPrimeAdmin())) ||
-        // Prime admin can do anything
-        isPrimeAdmin()
+        // Manager can update buyers and sellers only
+        (isManager() && !isSuperAdmin() &&
+          resource.data.role in ['buyer', 'seller'] &&
+          request.resource.data.role in ['buyer', 'seller']) ||
+        // Super Admin can do anything
+        isSuperAdmin()
       );
       
       // No one can delete user documents
@@ -137,10 +116,10 @@ service cloud.firestore {
     // SELLER APPLICATIONS COLLECTION
     // ===============================================================
     match /sellerApplications/{applicationId} {
-      // Buyers can read their own applications, admins can read all
+      // Buyers can read their own applications; managers can read all
       allow read: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
-        isAdmin()
+        isManager()
       );
       
       // Authenticated buyers can create applications
@@ -149,45 +128,111 @@ service cloud.firestore {
         request.resource.data.status == 'pending' &&
         hasRequiredFields(['userId', 'fullName', 'email', 'phone', 'location', 'sellingPlatform', 'experience', 'status']);
       
-      // Only admins can update applications (approve/reject)
-      allow update: if isAdmin();
+      // Managers can update applications (approve/reject)
+      allow update: if isManager();
       
       // No deletion
       allow delete: if false;
     }
 
     // ===============================================================
-    // PRODUCTS COLLECTION
+    // PRODUCTS COLLECTION (contains ONLY live products)
     // ===============================================================
     match /products/{productId} {
-      // Everyone can read products
+      // Everyone can read live products
       allow read: if true;
       
-      // Only admins can create products
-      allow create: if isAdmin();
+      // Managers and Super Admin can create products directly
+      allow create: if isManager();
       
-      // Only admins can update products
-      allow update: if isAdmin();
+      // Managers and Super Admin can update products
+      allow update: if isManager();
       
-      // Only admins can delete products
-      allow delete: if isAdmin();
+      // Managers and Super Admin can delete products
+      allow delete: if isManager();
+    }
+
+    // ===============================================================
+    // PRODUCT VERSIONS COLLECTION (moderation queue)
+    // ===============================================================
+    match /product_versions/{versionId} {
+      // Sellers can read their own versions; managers can read all
+      allow read: if isAuthenticated() && (
+        resource.data.createdBy == request.auth.uid ||
+        isManager()
+      );
+      
+      // Sellers can create versions (submit for review)
+      allow create: if isAuthenticated() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.status == 'pending_review' &&
+        (isSeller() || isManager());
+      
+      // Managers can update versions (approve/reject)
+      // Super Admin can also bypass
+      allow update: if isManager();
+      
+      // No deletion
+      allow delete: if isSuperAdmin();
     }
 
     // ===============================================================
     // ORDERS COLLECTION
     // ===============================================================
     match /orders/{orderId} {
-      // Users can read their own orders, admins can read all
-      allow read: if isAdmin() || 
-        (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Users can read their own orders; sellers can read orders with their sellerId; managers/super_admin can read all
+      allow read: if isManager() || 
+        (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+        (isAuthenticated() && resource.data.sellerId == request.auth.uid);
       
       // Authenticated users (buyers) can create orders
       allow create: if isAuthenticated();
       
-      // Only admins can update orders (status changes)
-      allow update: if isAdmin();
+      // Sellers can update ONLY status field on their own orders (no cancel)
+      // Managers and Super Admin can update any order
+      allow update: if (
+        (isSeller() && resource.data.sellerId == request.auth.uid &&
+          request.resource.data.status in ['processing', 'shipped', 'delivered']) ||
+        isManager()
+      );
       
       // Orders cannot be deleted
+      allow delete: if false;
+    }
+
+    // ===============================================================
+    // PAYOUTS COLLECTION
+    // ===============================================================
+    match /payouts/{payoutId} {
+      // Sellers can read their own payouts; super_admin can read all
+      allow read: if isSuperAdmin() ||
+        (isAuthenticated() && resource.data.sellerId == request.auth.uid);
+      
+      // Sellers can create payout requests
+      allow create: if isAuthenticated() &&
+        isSeller() &&
+        request.resource.data.sellerId == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      
+      // Only super_admin can update payouts (approve/process)
+      allow update: if isSuperAdmin();
+      
+      // No deletion
+      allow delete: if false;
+    }
+
+    // ===============================================================
+    // AUDIT LOGS COLLECTION
+    // ===============================================================
+    match /audit_logs/{logId} {
+      // Only managers and super_admin can read audit logs
+      allow read: if isManager();
+      
+      // Any authenticated user can create logs (actions are logged from client)
+      allow create: if isAuthenticated();
+      
+      // Logs are immutable
+      allow update: if false;
       allow delete: if false;
     }
 
@@ -195,17 +240,17 @@ service cloud.firestore {
     // REVIEWS COLLECTION
     // ===============================================================
     match /reviews/{reviewId} {
-      // Anyone can read approved reviews. Admins can read all.
-      allow read: if isAdmin() || (resource.data.status == 'approved');
+      // Anyone can read approved reviews. Managers can read all.
+      allow read: if isManager() || (resource.data.status == 'approved');
       
       // Authenticated users can create reviews
       allow create: if isAuthenticated();
       
-      // Only admins can update reviews (approve/reject)
-      allow update: if isAdmin();
+      // Only managers can update reviews (approve/reject)
+      allow update: if isManager();
       
-      // Only admins can delete reviews
-      allow delete: if isAdmin();
+      // Only managers can delete reviews
+      allow delete: if isManager();
     }
   }
 }

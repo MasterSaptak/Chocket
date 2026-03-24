@@ -1,8 +1,9 @@
 // ===== ROLE & STATUS TYPES =====
-export type UserRole = 'buyer' | 'seller' | 'admin' | 'primeadmin';
+export type UserRole = 'buyer' | 'seller' | 'manager' | 'primeadmin';
 export type UserStatus = 'active' | 'banned';
 export type SellerApplicationStatus = 'pending' | 'approved' | 'rejected';
 export type SellingPlatform = 'Instagram' | 'Facebook' | 'Offline' | 'Website' | 'Other';
+export type ProductStatus = 'pending_review' | 'approved' | 'rejected' | 'live';
 
 // ===== USER =====
 export interface ChocketUser {
@@ -16,6 +17,8 @@ export interface ChocketUser {
   isVerified: boolean;
   profileImage: string;
   dob?: string;
+  pending_balance?: number;
+  available_balance?: number;
 }
 
 // ===== SELLER APPLICATION =====
@@ -31,21 +34,93 @@ export interface SellerApplication {
   identityProof: string; // file URL
   status: SellerApplicationStatus;
   appliedAt: string;
-  reviewedBy?: string; // admin uid
+  reviewedBy?: string; // manager/super_admin uid
   reviewedAt?: string;
   rejectionReason?: string;
 }
 
-// ===== LEGACY / EXISTING TYPES (kept for backward compat) =====
-export interface User {
-  uid: string;
+// ===== PRODUCT =====
+export interface Product {
+  id: string;
+  sellerId: string;
   name: string;
-  email: string;
-  phone?: string;
-  addresses: Address[];
-  wishlist: string[]; // array of product IDs
-  isVerified: boolean;
-  createdAt: Date | string | number;
+  brand: string;
+  description: string;
+  prices: {
+    [currency: string]: number;
+  };
+  images: string[];
+  category: string;
+  stock: number;
+  rating: number;
+  reviews: number;
+  isBestSeller?: boolean;
+  isNew?: boolean;
+  status: 'live';
+  approvedBy: string;
+  bypass?: boolean;
+  updatedAt: string;
+  createdAt: string;
+}
+
+// ===== PRODUCT VERSION (Moderation System) =====
+export interface ProductVersion {
+  id: string;
+  productId: string;
+  data: Partial<Product>;
+  status: ProductStatus;
+  createdBy: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ===== AUDIT LOG =====
+export interface AuditLog {
+  id: string;
+  action: string;
+  performedBy: string;
+  role: UserRole;
+  targetId: string;
+  timestamp: string;
+  reason?: string;
+  bypass: boolean;
+}
+
+// ===== CATEGORY =====
+export interface Category {
+  id: string;
+  name: string;
+  image: string;
+}
+
+// ===== ORDERS =====
+export interface Order {
+  id: string;
+  userId: string;
+  sellerId: string;
+  products: OrderItem[];
+  totalAmount: number;
+  currency: string;
+  shippingAddress: Address;
+  country: string;
+  paymentStatus: 'Pending' | 'Success' | 'Failed';
+  paymentProvider: 'Razorpay' | 'Stripe' | 'PayPal' | 'Wise';
+  transactionId?: string;
+  orderStatus: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  trackingId?: string;
+  isGift: boolean;
+  giftDetails?: GiftDetails;
+  createdAt: string;
+  deliveryDate?: string;
+}
+
+export interface OrderItem {
+  productId: string;
+  quantity: number;
+  priceAtPurchase: number;
+  currency: string;
 }
 
 export interface Address {
@@ -59,53 +134,6 @@ export interface Address {
   isDefault: boolean;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  brand: string;
-  description: string;
-  prices: {
-    [currency: string]: number;
-  };
-  images: string[];
-  category: string;
-  stock: number;
-  rating: number;
-  countryAvailability: string[];
-  createdAt: Date | string | number;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  image: string;
-}
-
-export interface Order {
-  id: string;
-  userId: string;
-  products: OrderItem[];
-  totalAmount: number;
-  currency: string;
-  shippingAddress: Address;
-  country: string;
-  paymentStatus: 'Pending' | 'Success' | 'Failed';
-  paymentProvider: 'Razorpay' | 'Stripe' | 'PayPal' | 'Wise';
-  transactionId?: string;
-  orderStatus: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  trackingId?: string;
-  isGift: boolean;
-  giftDetails?: GiftDetails;
-  createdAt: Date | string | number;
-}
-
-export interface OrderItem {
-  productId: string;
-  quantity: number;
-  priceAtPurchase: number;
-  currency: string;
-}
-
 export interface GiftDetails {
   occasion: 'Birthday' | 'Anniversary' | 'Valentine' | 'Custom';
   message: string;
@@ -114,15 +142,28 @@ export interface GiftDetails {
   recipientPhone?: string;
 }
 
+// ===== PAYOUTS =====
+export interface Payout {
+  id: string;
+  sellerId: string;
+  amount: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  requestedAt: string;
+  processedAt?: string;
+}
+
+// ===== REVIEWS =====
 export interface Review {
   id: string;
   userId: string;
   productId: string;
   rating: number;
   comment: string;
-  createdAt: Date | string | number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
+// ===== MISCELLANEOUS =====
 export interface Cart {
   userId: string;
   items: CartItem[];
@@ -139,5 +180,5 @@ export interface Notification {
   title: string;
   message: string;
   readStatus: boolean;
-  timestamp: Date | string | number;
+  timestamp: string;
 }

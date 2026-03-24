@@ -63,7 +63,7 @@ function SellerApplyContent() {
             <CheckCircle className="w-8 h-8 text-emerald-400" />
           </div>
           <h2 className="text-2xl font-display font-bold text-emerald-400">
-            Already a {userData.role === 'seller' ? 'Seller' : userData.role === 'admin' ? 'Admin' : 'Prime Admin'}
+            Already a {userData.role === 'seller' ? 'Seller' : userData.role === 'manager' ? 'Manager' : 'Prime Admin'}
           </h2>
           <p className="text-[#FFF3E0]/60 text-sm">
             You already have elevated access on this platform.
@@ -346,7 +346,7 @@ function SellerApplyContent() {
 
 export default function SellerApplyPage() {
   return (
-    <RouteGuard allowedRoles={['buyer', 'seller', 'admin', 'primeadmin']}>
+    <RouteGuard allowedRoles={['buyer', 'seller', 'manager', 'primeadmin']}>
       <SellerApplyContent />
     </RouteGuard>
   );

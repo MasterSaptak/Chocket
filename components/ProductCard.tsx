@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 export interface Product {
   id: string;
+  sellerId?: string;
   name: string;
   description?: string;
   price: number;
@@ -22,6 +23,9 @@ export interface Product {
   reviews: number;
   isNew?: boolean;
   isBestSeller?: boolean;
+  status?: string;
+  approvedBy?: string;
+  bypass?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -8,27 +8,27 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2, Lock, Shield } from 'lucide-react';
 import { toast } from 'sonner';
-import { canAccessAdmin } from '@/lib/auth';
+import { canAccessManagerDashboard } from '@/lib/rbac';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, userData, loading, role } = useAuth();
   const router = useRouter();
   const [isCheckingRole, setIsCheckingRole] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isManager, setIsManager] = useState(false);
 
   useEffect(() => {
-    const checkAdminRole = async () => {
+    const checkManagerRole = async () => {
       if (!user) {
         setIsCheckingRole(false);
         return;
       }
 
       try {
-        // Check if the user has admin or primeadmin role
-        if (userData && canAccessAdmin(userData.role)) {
-          setIsAdmin(true);
+        // Check if the user has manager or super_admin role
+        if (userData && canAccessManagerDashboard(userData.role)) {
+          setIsManager(true);
         } else if (user.email?.toLowerCase() === 'burningsoulofdarkness@gmail.com') {
-          // Bootstrap the prime admin
+          // Bootstrap the super admin
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
           if (!userDoc.exists()) {
@@ -42,24 +42,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               profileImage: user.photoURL || '',
               createdAt: serverTimestamp(),
             });
-          } else if (userDoc.data().role !== 'primeadmin' && userDoc.data().role !== 'admin') {
+          } else if (userDoc.data().role !== 'primeadmin' && userDoc.data().role !== 'manager') {
             await setDoc(userDocRef, { role: 'primeadmin' }, { merge: true });
           }
-          setIsAdmin(true);
+          setIsManager(true);
         } else {
-          setIsAdmin(false);
-          toast.error('Unauthorized access. Admin privileges required.');
+          setIsManager(false);
+          toast.error('Unauthorized access. Manager privileges required.');
         }
       } catch (error) {
-        console.error('Error checking admin role:', error);
-        toast.error('Failed to verify admin privileges.');
+        console.error('Error checking manager role:', error);
+        toast.error('Failed to verify manager privileges.');
       } finally {
         setIsCheckingRole(false);
       }
     };
 
     if (!loading) {
-      checkAdminRole();
+      checkManagerRole();
     }
   }, [user, userData, loading]);
 
@@ -78,13 +78,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen flex items-center justify-center bg-[#0D0705]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-[#D4AF37]" />
-          <p className="text-[#FFF3E0]/50 text-sm">Verifying admin access...</p>
+          <p className="text-[#FFF3E0]/50 text-sm">Verifying manager access...</p>
         </div>
       </div>
     );
   }
 
-  if (!user || !isAdmin) {
+  if (!user || !isManager) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0D0705] p-4">
         <div className="w-full max-w-md bg-[#1A0F0B] shadow-2xl border border-[#3E2723] rounded-2xl overflow-hidden">
@@ -92,9 +92,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="w-16 h-16 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="w-8 h-8 text-[#D4AF37]" />
             </div>
-            <h2 className="text-3xl font-display font-bold text-[#D4AF37]">Admin Access</h2>
+            <h2 className="text-3xl font-display font-bold text-[#D4AF37]">Manager Access</h2>
             <p className="text-[#FFF3E0]/50 text-sm">
-              Please sign in with your authorized Google account to access the Chocket admin dashboard.
+              Please sign in with your authorized Google account to access the Chocket manager dashboard.
             </p>
             <div className="pt-6 space-y-3">
               <button

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ArrowRight, ChevronLeft, Shield, Package } from 'lucide-react';
 import { toast } from 'sonner';
-import { registerWithEmail, loginWithEmail, signInWithGoogle, getDashboardPath, getUserRole, logout } from '@/lib/auth';
+import { registerWithEmail, loginWithEmail, signInWithGoogle, getUserRole, logout } from '@/lib/auth';
+import { getDashboardPath } from '@/lib/rbac';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
 
@@ -27,7 +28,7 @@ export default function AuthPage() {
   // Unified Redirection Logic
   useEffect(() => {
     if (user && role) {
-      if (!user.emailVerified && role !== 'primeadmin' && role !== 'admin') {
+      if (!user.emailVerified && role !== 'primeadmin' && role !== 'manager') {
         router.push('/verify-email');
       }
     } else if (user && !role && !authLoading) {
@@ -76,7 +77,7 @@ export default function AuthPage() {
         const firebaseUser = await loginWithEmail(email, password);
         const userRole = await getUserRole(firebaseUser.uid);
 
-        if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'admin') {
+        if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'manager') {
           toast.error('Please verify your email.');
           router.push('/verify-email');
           setIsLoading(false);
@@ -108,7 +109,7 @@ export default function AuthPage() {
       const firebaseUser = await signInWithGoogle();
       const userRole = await getUserRole(firebaseUser.uid);
       
-      if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'admin') {
+      if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'manager') {
         router.push('/verify-email');
         setIsLoading(false);
         return;
@@ -293,7 +294,7 @@ export default function AuthPage() {
                 {[
                   { role: 'primeadmin', label: 'Prime Admin', desc: 'System Master Control', icon: Shield, color: 'text-purple-400' },
                   { role: 'seller', label: 'Seller Portal', desc: 'Product Management', icon: Package, color: 'text-emerald-400' },
-                  { role: 'admin', label: 'Admin Panel', desc: 'Store Moderation', icon: Shield, color: 'text-blue-400' }
+                  { role: 'manager', label: 'Manager Panel', desc: 'Store Moderation', icon: Shield, color: 'text-blue-400' }
                 ].map((item) => (
                   <button
                     key={item.role}
