@@ -13,6 +13,7 @@ import { FloatingCart } from '@/components/FloatingCart';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import { InstallPWA } from '@/components/InstallPWA';
 import { PWAProvider } from '@/components/PWAProvider';
+import DebugConsole from '@/components/DebugConsole';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -98,6 +99,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
                 </MainContent>
                 <FloatingCart />
                 <InstallPWA />
+                <DebugConsole />
                 <Toaster 
                   position="top-center" 
                   richColors 

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, ChevronDown, Globe, Shield, Package, Award } from 'lucide-react';
 import Link from 'next/link';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 /* ── Animated Choco Globe — Earth as a chocolate ball ── */
 function ChocoGlobe() {
@@ -156,13 +156,21 @@ function ChocoGlobe() {
 
 /* ── Gold dust particle system ── */
 function GoldDustParticles() {
-  const particles = Array.from({ length: 25 }, (_, i) => ({
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const particles = useRef(Array.from({ length: 25 }, (_, i) => ({
     left: `${Math.random() * 100}%`,
     size: `${2 + Math.random() * 4}px`,
     duration: `${6 + Math.random() * 8}s`,
     delay: `${Math.random() * 6}s`,
     driftX: `${(Math.random() - 0.5) * 80}px`,
-  }));
+  }))).current;
+
+  if (!mounted) return <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden" />;
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">

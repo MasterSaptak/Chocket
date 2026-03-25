@@ -31,12 +31,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log('🔄 Auth State Changed:', firebaseUser ? `User: ${firebaseUser.uid}` : 'No user');
       setUser(firebaseUser);
       if (!firebaseUser) {
         setUserData(null);
         setLoading(false);
       }
     });
+
+    console.log('🚀 Auth Listener Initialized');
 
     // Handle Redirect Result for Mobile Google Sign-In
     getRedirectResult(auth).then(async (result: any) => {
