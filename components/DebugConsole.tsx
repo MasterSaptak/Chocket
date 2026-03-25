@@ -19,6 +19,16 @@ export default function DebugConsole() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Restore logs from session to survive redirects
+    const stored = sessionStorage.getItem('chocket_debug_logs');
+    if (stored) {
+      try {
+        setLogs(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
     const originalLog = console.log;
     const originalWarn = console.warn;
     const originalError = console.error;
@@ -46,7 +56,13 @@ export default function DebugConsole() {
         timestamp: new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       };
 
-      setLogs(prev => [...prev.slice(-100), newLog]);
+      setLogs(prev => {
+        const updated = [...prev.slice(-100), newLog];
+        try {
+          sessionStorage.setItem('chocket_debug_logs', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
       if (!isOpen) setHasNewLogs(true);
     };
 
@@ -91,6 +107,7 @@ export default function DebugConsole() {
   const clearLogs = () => {
     setLogs([]);
     setHasNewLogs(false);
+    sessionStorage.removeItem('chocket_debug_logs');
   };
 
   const copyLogs = () => {

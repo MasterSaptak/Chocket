@@ -42,14 +42,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('🚀 Auth Listener Initialized');
 
     // Handle Redirect Result for Mobile Google Sign-In
+    console.log('🔍 Checking for Redirect Auth result...');
     getRedirectResult(auth).then(async (result: any) => {
       if (result && result.user) {
+        console.log('✅ Redirect Auth Result Found:', result.user.uid);
         // Double check if user document exists, if not create it
         const { doc, getDoc, setDoc, serverTimestamp } = await import('firebase/firestore');
         const userRef = doc(db, 'users', result.user.uid);
         const userSnap = await getDoc(userRef);
         
         if (!userSnap.exists()) {
+          console.log('🌱 Creating missing user profile from redirect...');
           await setDoc(userRef, {
             uid: result.user.uid,
             name: result.user.displayName || 'Chocolate Lover',
@@ -64,16 +67,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             tier: 'bronze'
           });
         }
+      } else {
+        console.log('ℹ️ No Redirect Result found.');
       }
     }).catch((error: any) => {
-      console.error("Redirect Auth Error:", error);
+      console.error("❌ Redirect Auth Error:", error);
+      // Log specific error codes for debugging
+      if (error.code) console.error(`Error Code: ${error.code}`);
       setLoading(false);
     });
 
-    // Fallback: If Firebase takes too long, stop loading
+    // Fallback: Extended to 15s for mobile reliability
     const safetyTimeout = setTimeout(() => {
+      console.log('🕒 Loading Safety Timeout Reached (15s)');
       setLoading(false);
-    }, 1000);
+    }, 15000);
+
+    // Initial log of current environment
+    console.log(`🌐 Application URL: ${window.location.href}`);
+    console.log(`📱 User Agent: ${navigator.userAgent}`);
 
     return () => {
       unsubscribeAuth();
