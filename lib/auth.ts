@@ -62,23 +62,31 @@ export async function loginWithEmail(
 }
 
 // ===== GOOGLE SIGN IN =====
-export async function signInWithGoogle(useRedirect: boolean = false): Promise<{ user: FirebaseUser, role: UserRole } | void> {
+export async function signInWithGoogle(forceRedirect: boolean = false): Promise<{ user: FirebaseUser, role: UserRole } | void> {
   try {
-    if (useRedirect) {
+    // If it's mobile or the user chose a hard-redirect (for troubleshooting)
+    if (forceRedirect) {
+      console.log('--- 🚀 STARTING GOOGLE REDIRECT AUTH ---');
       return signInWithRedirect(auth, googleProvider);
     }
     
+    console.log('--- 🔲 STARTING GOOGLE POPUP AUTH ---');
     const result = await signInWithPopup(auth, googleProvider);
     
     // 🔥 OPTIMIZATION: Return immediately after Google Auth.
-    // The AuthProvider's real-time snapshot and AuthPage's self-healing 
-    // will handle the database entry and role detection in the background.
-    // This removes 1-2 seconds of database "waiting" time.
     return { user: result.user, role: 'buyer' };
   } catch (error: any) {
     if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+      console.log('ℹ️ Google Sign-in popup closed or cancelled.');
       return;
     }
+    
+    // Auto-fallback to redirect if popup is blocked or fails in a way that suggests cross-site issues
+    if (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment') {
+      console.warn('⚠️ Popup blocked or unsupported, falling back to redirect...');
+      return signInWithRedirect(auth, googleProvider);
+    }
+
     console.error('Sign-in with Google failed:', error);
     throw error;
   }
