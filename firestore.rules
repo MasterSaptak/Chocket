@@ -251,6 +251,31 @@ service cloud.firestore {
       
       // Only managers can delete reviews
       allow delete: if isManager();
+
+    // ===============================================================
+    // NEWSLETTER COLLECTION
+    // ===============================================================
+    match /newsletter/{email} {
+      allow read: if isManager();
+      allow create: if true; // Public can sign up
+      allow update, delete: if isManager();
+    }
+
+    // ===============================================================
+    // FAVORITES / WISHLIST COLLECTION
+    // ===============================================================
+    match /favorites/{favoriteId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+
+    // ===============================================================
+    // BRANDS COLLECTION
+    // ===============================================================
+    match /brands/{brandId} {
+      allow read: if true;
+      allow write: if isManager();
     }
   }
 }

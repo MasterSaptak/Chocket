@@ -9,6 +9,7 @@ import { registerWithEmail, loginWithEmail, signInWithGoogle, getUserRole, logou
 import { getDashboardPath } from '@/lib/rbac';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -27,18 +28,28 @@ export default function AuthPage() {
 
   // Unified Redirection Logic
   useEffect(() => {
-    if (user && role) {
+    if (user && !authLoading) {
       if (!user.emailVerified) {
         router.push('/verify-email');
+        return;
       }
-    } else if (user && !role && !authLoading) {
-      // Self-healing mechanism: If Google Auth popup promise hangs completely due to Next.js COOP bugs,
-      // auth propagates via indexedDB causing user=truthy, but createUserDocument never ran.
+      
+      // If we have a role, go to dashboard. If not, wait briefly for authLoading
+      // or use the self-healing logic below.
+      if (role) {
+        router.push(getDashboardPath(role));
+      }
+    }
+    
+    // Self-healing for missing profiles (common with Google Auth COOP issues)
+    if (user && !role && !authLoading) {
       const timer = setTimeout(async () => {
         try {
           const manualRole = await getUserRole(user.uid);
-          if (!manualRole) {
-            console.log('Self-healing missing profile...');
+          if (manualRole) {
+            router.push(getDashboardPath(manualRole));
+          } else {
+            // No profile? Create one and redirect
             const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
             await setDoc(doc(db, 'users', user.uid), {
               uid: user.uid,
@@ -50,11 +61,12 @@ export default function AuthPage() {
               isVerified: user.emailVerified || false,
               createdAt: serverTimestamp()
             }, { merge: true });
+            router.push('/profile');
           }
         } catch (err: any) {
           console.error('Fast-heal error:', err);
         }
-      }, 1000);
+      }, 500); // Shorter timeout for faster recovery
       return () => clearTimeout(timer);
     }
   }, [user, role, router, authLoading]);
@@ -93,6 +105,16 @@ export default function AuthPage() {
         message = 'Invalid email or password. Please try again.';
       } else if (error.code === 'auth/too-many-requests') {
         message = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+        message = (
+          <div className="flex flex-col gap-2">
+            <p className="font-bold">Unauthorized Domain 🚫</p>
+            <p className="text-xs leading-normal opacity-70">
+              Please add <code className="bg-white/10 px-1 rounded text-[#D4AF37]">chocket.saptech.online</code> to your 
+              <strong> Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized Domains </strong>.
+            </p>
+          </div>
+        ) as any;
       } else if (error.code === 'auth/email-already-in-use') {
         message = 'An account with this email already exists. Please sign in instead.';
       } else if (error.message?.includes('offline')) {
@@ -105,26 +127,42 @@ export default function AuthPage() {
     }
   };
 
+  const isMobile = useIsMobile();
+
   const handleGoogleAuth = async () => {
     setIsLoading(true);
     try {
-      const firebaseUser = await signInWithGoogle();
-      const userRole = await getUserRole(firebaseUser.uid);
+      // Use redirect on mobile for significantly better performance and reliability
+      const result = await signInWithGoogle(isMobile);
       
-      if (!firebaseUser.emailVerified) {
-        toast.error('Please verify your email before continuing.');
-        router.push('/verify-email');
-        setIsLoading(false);
-        return;
+      // For popups, we get the result immediately
+      if (result) {
+        const { user: firebaseUser } = result;
+        if (!firebaseUser.emailVerified) {
+          toast.error('Please verify your email before continuing.');
+          router.push('/verify-email');
+          setIsLoading(false);
+          return;
+        }
+        toast.success('Welcome back! 🍫');
       }
-      
-      toast.success('Welcome back! 🍫');
-      setIsLoading(false);
+      // If result is undefined, we're either redirecting or it's been handled
     } catch (error: any) {
       if (error.code !== 'auth/popup-closed-by-user') {
         let message = error.message || 'Google sign-in failed.';
+        
         if (error.code === 'auth/popup-blocked') {
           message = 'Sign-in popup was blocked. Please allow popups.';
+        } else if (error.code === 'auth/unauthorized-domain') {
+          message = (
+            <div className="flex flex-col gap-2">
+              <p className="font-bold text-left">Unauthorized Domain 🚫</p>
+              <p className="text-xs leading-normal opacity-70 text-left">
+                Please add <code className="bg-white/10 px-1 rounded text-[#D4AF37]">chocket.saptech.online</code> to your 
+                <strong> Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized Domains </strong>.
+              </p>
+            </div>
+          ) as any;
         } else if (error.message?.includes('offline')) {
           message = 'You appear to be offline. Please check your connection.';
         }

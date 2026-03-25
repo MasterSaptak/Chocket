@@ -3,23 +3,16 @@
 import { ProductCard, Product } from './ProductCard';
 import { motion } from 'motion/react';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { getFeaturedProducts, seedProductsIfEmpty } from '@/lib/products';
 
-export function FeaturedProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+interface FeaturedProductsProps {
+  initialProducts: Product[];
+}
 
-  useEffect(() => {
-    async function loadProducts() {
-      await seedProductsIfEmpty();
-      const fetchedProducts = await getFeaturedProducts();
-      setProducts(fetchedProducts);
-      setLoading(false);
-    }
-    loadProducts();
-  }, []);
+export function FeaturedProducts({ initialProducts }: FeaturedProductsProps) {
+  // We use the initialProducts passed from server for instant rendering
+  const [products] = useState<Product[]>(initialProducts);
 
   return (
     <section className="py-24 bg-[#0D0705] relative overflow-hidden">
@@ -80,42 +73,24 @@ export function FeaturedProducts() {
           </motion.div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <motion.div
-                key={i}
-                className="bg-[#1A0F0B] rounded-2xl p-4 border border-[#3E2723]/50 h-[420px]"
-                animate={{ opacity: [0.3, 0.6, 0.3] }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-              >
-                <div className="w-full h-[60%] bg-[#2C1A12] rounded-xl mb-4" />
-                <div className="h-4 bg-[#2C1A12] rounded w-3/4 mb-2" />
-                <div className="h-4 bg-[#2C1A12] rounded w-1/2 mb-4" />
-                <div className="h-8 bg-[#2C1A12] rounded w-1/4" />
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 40, scale: 0.95 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                viewport={{ once: true, margin: '-80px' }}
-                transition={{
-                  duration: 0.6,
-                  delay: index * 0.12,
-                  type: 'spring',
-                  bounce: 0.25,
-                }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {products.map((product, index) => (
+            <motion.div
+              key={product.id}
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{
+                duration: 0.6,
+                delay: index * 0.12,
+                type: 'spring',
+                bounce: 0.25,
+              }}
+            >
+              <ProductCard product={product} />
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Fallback: If Firebase takes too long, stop loading
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 4000);
+    }, 2000);
 
     return () => {
       unsubscribeAuth();

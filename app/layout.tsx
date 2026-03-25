@@ -12,6 +12,7 @@ import { CursorRipple } from '@/components/CursorRipple';
 import { FloatingCart } from '@/components/FloatingCart';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 import { InstallPWA } from '@/components/InstallPWA';
+import { PWAProvider } from '@/components/PWAProvider';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -35,9 +36,37 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: 'Chocket | Deliver Happiness Worldwide 🌍',
-  description: 'Premium artisan chocolate e-commerce — handcrafted chocolates from Belgium, Switzerland, France & Italy. Luxury gifting & cross-border delivery.',
+  metadataBase: new URL('https://chocket.saptech.online'),
+  title: {
+    default: 'Chocket | Premium Artisan Chocolates & Global Gifting 🌍',
+    template: '%s | Chocket'
+  },
+  description: 'Handcrafted luxury chocolates from Belgium, Switzerland, France & Italy. Experience premium artisan truffles, gift hampers, and global cold-chain delivery. Chocket delivers happiness worldwide.',
+  keywords: ['artisan chocolate', 'luxury gifts', 'belgian chocolate', 'swiss chocolate', 'premium truffles', 'chocolate delivery', 'gourmet chocolates'],
   manifest: '/manifest.json',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://chocket.saptech.online',
+    siteName: 'Chocket',
+    title: 'Chocket | Elite Artisan Chocolate Experience',
+    description: 'Elevate your senses with handcrafted artisan chocolates. Luxury gifting with seamless global delivery.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Chocket Premium Artisan Chocolates'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chocket | Premium Artisan Chocolates',
+    description: 'Experience the world of luxury artisan chocolates. Handcrafted excellence delivered worldwide.',
+    images: ['/og-image.png'],
+    creator: '@chocket'
+  },
   icons: {
     apple: '/celebration-chocolate.png',
   },
@@ -56,32 +85,34 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en" className={`${outfit.variable} ${cinzel.variable} ${cormorant.variable}`} data-scroll-behavior="smooth">
       <body className="font-sans antialiased min-h-screen flex flex-col bg-[#0D0705] text-[#FFF3E0]" suppressHydrationWarning>
-        <ServiceWorkerRegister />
-        <ErrorBoundary>
-          <AuthProvider>
-            <CartProvider>
-              <LoadingScreen />
-              <CursorRipple />
-              <Navigation />
-              <MainContent>
-                {children}
-              </MainContent>
-              <FloatingCart />
-              <InstallPWA />
-              <Toaster 
-                position="top-center" 
-                richColors 
-                toastOptions={{
-                  style: {
-                    background: '#1A0F0B',
-                    border: '1px solid #3E2723',
-                    color: '#FFF3E0',
-                  },
-                }}
-              />
-            </CartProvider>
-          </AuthProvider>
-        </ErrorBoundary>
+        <PWAProvider>
+          <ServiceWorkerRegister />
+          <ErrorBoundary>
+            <AuthProvider>
+              <CartProvider>
+                <LoadingScreen />
+                <CursorRipple />
+                <Navigation />
+                <MainContent>
+                  {children}
+                </MainContent>
+                <FloatingCart />
+                <InstallPWA />
+                <Toaster 
+                  position="top-center" 
+                  richColors 
+                  toastOptions={{
+                    style: {
+                      background: '#1A0F0B',
+                      border: '1px solid #3E2723',
+                      color: '#FFF3E0',
+                    },
+                  }}
+                />
+              </CartProvider>
+            </AuthProvider>
+          </ErrorBoundary>
+        </PWAProvider>
       </body>
     </html>
   );

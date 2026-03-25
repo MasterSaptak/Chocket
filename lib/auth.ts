@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   signOut,
   updateProfile,
@@ -61,20 +62,35 @@ export async function loginWithEmail(
 }
 
 // ===== GOOGLE SIGN IN =====
-export async function signInWithGoogle(): Promise<FirebaseUser> {
-  const result = await signInWithPopup(auth, googleProvider);
+export async function signInWithGoogle(useRedirect: boolean = false): Promise<{ user: FirebaseUser, role: UserRole } | void> {
+  try {
+    if (useRedirect) {
+      return signInWithRedirect(auth, googleProvider);
+    }
+    
+    const result = await signInWithPopup(auth, googleProvider);
+    const userRef = doc(db, 'users', result.user.uid);
+    const userSnap = await getDoc(userRef);
 
-  const userRef = doc(db, 'users', result.user.uid);
-  const userSnap = await getDoc(userRef);
+    let role: UserRole = 'buyer';
 
-  if (!userSnap.exists()) {
-    await createUserDocument(result.user, {
-      name: result.user.displayName || 'User',
-      phone: '',
-    });
+    if (!userSnap.exists()) {
+      await createUserDocument(result.user, {
+        name: result.user.displayName || 'User',
+        phone: '',
+      });
+    } else {
+      role = userSnap.data().role as UserRole || 'buyer';
+    }
+
+    return { user: result.user, role };
+  } catch (error: any) {
+    if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+      return;
+    }
+    console.error('Sign-in with Google failed:', error);
+    throw error;
   }
-
-  return result.user;
 }
 
 // ===== LOGOUT =====

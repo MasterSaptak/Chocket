@@ -11,6 +11,7 @@ import { SoundToggle } from './SoundToggle';
 import { logout } from '@/lib/auth';
 import { getRoleDisplayName, getRoleColor } from '@/lib/rbac';
 import { toast } from 'sonner';
+import { usePWA } from './PWAProvider';
 
 export function Navigation() {
   const pathname = usePathname();
@@ -20,6 +21,7 @@ export function Navigation() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { totalItems } = useCart();
   const { user, userData, role } = useAuth();
+  const { canInstall, install, isStandalone } = usePWA();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -263,6 +265,17 @@ export function Navigation() {
                             </Link>
                           )}
                           <div className="my-1 border-t border-[#3E2723]" />
+                          {canInstall && !isStandalone && (
+                            <button
+                              onClick={() => {
+                                install();
+                                setShowUserMenu(false);
+                              }}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-colors text-sm font-medium"
+                            >
+                              <Store className="w-4 h-4" /> Install App
+                            </button>
+                          )}
                           <button
                             onClick={handleLogout}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400/70 hover:text-red-400 hover:bg-red-500/5 transition-colors text-sm"

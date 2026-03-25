@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chocket-pwa-v3';
+const CACHE_NAME = 'chocket-pwa-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -31,7 +31,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Navigation requests: Network-first, then cache for offline support
+  // Skip non-GET requests and external API calls that should not be cached
+  if (event.request.method !== 'GET') return;
+  
+  // Navigation requests: Network-first
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -44,7 +47,9 @@ self.addEventListener('fetch', (event) => {
   // Static assets: Cache-first, then network
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((networkResponse) => {
+      if (response) return response;
+      
+      return fetch(event.request).then((networkResponse) => {
         // Cache images dynamically if they're from our site
         if (event.request.destination === 'image' && event.request.url.startsWith(self.location.origin)) {
           const cacheCopy = networkResponse.clone();
@@ -53,6 +58,10 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
+      }).catch((err) => {
+        // Silently fail for failed fetches to prevent console spam for blocked domains (like GTM or Firebase)
+        console.debug('PWA Fetch failed:', event.request.url, err);
+        return new Response('Network error', { status: 408 });
       });
     })
   );
