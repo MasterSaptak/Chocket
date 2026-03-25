@@ -19,6 +19,8 @@ export interface ChocketUser {
   dob?: string;
   pending_balance?: number;
   available_balance?: number;
+  tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
+  lastUpdated?: string;
 }
 
 // ===== SELLER APPLICATION =====

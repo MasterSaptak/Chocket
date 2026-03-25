@@ -55,7 +55,7 @@ export async function updateUserStatus(uid: string, status: UserStatus): Promise
 
 export async function updateUserProfile(
   uid: string,
-  data: Partial<Pick<ChocketUser, 'name' | 'phone' | 'profileImage' | 'dob'>>
+  data: Partial<Pick<ChocketUser, 'name' | 'phone' | 'profileImage' | 'dob' | 'lastUpdated'>>
 ): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, uid);
   await setDoc(userRef, data, { merge: true });
