@@ -3,7 +3,7 @@ import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
     const { uid } = await params;

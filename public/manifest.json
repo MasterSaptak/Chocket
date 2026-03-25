@@ -19,5 +19,21 @@
       "type": "image/png",
       "purpose": "maskable any"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Shop Now",
+      "short_name": "Shop",
+      "description": "Browse our premium chocolate collection",
+      "url": "/shop",
+      "icons": [{ "src": "/celebration-chocolate.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Gift Hampers",
+      "short_name": "Gifts",
+      "description": "Explore luxury chocolate gifts",
+      "url": "/gifts",
+      "icons": [{ "src": "/gift-box.png", "sizes": "192x192" }]
+    }
   ]
 }

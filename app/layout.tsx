@@ -11,6 +11,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { CursorRipple } from '@/components/CursorRipple';
 import { FloatingCart } from '@/components/FloatingCart';
 import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
+import { InstallPWA } from '@/components/InstallPWA';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -37,6 +38,9 @@ export const metadata: Metadata = {
   title: 'Chocket | Deliver Happiness Worldwide 🌍',
   description: 'Premium artisan chocolate e-commerce — handcrafted chocolates from Belgium, Switzerland, France & Italy. Luxury gifting & cross-border delivery.',
   manifest: '/manifest.json',
+  icons: {
+    apple: '/celebration-chocolate.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -63,6 +67,7 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
                 {children}
               </MainContent>
               <FloatingCart />
+              <InstallPWA />
               <Toaster 
                 position="top-center" 
                 richColors 

@@ -53,19 +53,18 @@ export function InstallPWA() {
     };
   }, []);
 
-  if (isStandalone) return null; // Already installed
+  if (isStandalone) return null;
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      // Show the install prompt
+      // Show the native install prompt
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         setDeferredPrompt(null);
       }
-      // If dismisses, we can keep the deferredPrompt for later
     } else {
-      // Fallback: show instructions
+      // Fallback: show instructions if prompt is not ready OR it's iOS
       setShowInstructions(true);
     }
   };
@@ -111,12 +110,17 @@ export function InstallPWA() {
   };
 
   return (
-    <>
+    <motion.div 
+      initial={{ opacity: 0, x: -50 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 1, type: 'spring', damping: 20 }}
+      className="fixed bottom-24 md:bottom-8 left-4 md:left-6 z-40"
+    >
       <button
         onClick={handleInstallClick}
-        className="group relative flex items-center justify-center px-6 py-3 rounded-full bg-white/5 border border-white/10 text-white/90 font-medium text-sm md:text-base hover:bg-white/10 hover:border-[#D4AF37]/50 transition-all duration-300 z-10"
+        className="group relative flex items-center justify-center px-4 md:px-6 py-2.5 md:py-3 rounded-full bg-[#1A0F0B]/80 backdrop-blur-xl border border-[#D4AF37]/30 text-[#FFF3E0] font-medium text-xs md:text-sm shadow-xl shadow-[#000000]/50 hover:bg-[#2C1A12] hover:border-[#D4AF37] transition-all duration-300"
       >
-        <Download className="w-5 h-5 mr-2 group-hover:animate-bounce text-[#D4AF37]" />
+        <Download className="w-4 h-4 md:w-5 md:h-5 mr-2 group-hover:animate-bounce text-[#D4AF37]" />
         Install App
       </button>
 
@@ -156,6 +160,6 @@ export function InstallPWA() {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </motion.div>
   );
 }
