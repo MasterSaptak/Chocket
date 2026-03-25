@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { ChocketUser, UserRole } from '@/types';
@@ -38,10 +38,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Handle Redirect Result for Mobile Google Sign-In
+    getRedirectResult(auth).then(async (result: any) => {
+      if (result && result.user) {
+        // Double check if user document exists, if not create it
+        const { doc, getDoc, setDoc, serverTimestamp } = await import('firebase/firestore');
+        const userRef = doc(db, 'users', result.user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uid: result.user.uid,
+            name: result.user.displayName || 'Chocolate Lover',
+            email: result.user.email || '',
+            phone: '',
+            role: 'buyer',
+            status: 'active',
+            isVerified: result.user.emailVerified || false,
+            createdAt: serverTimestamp()
+          });
+        }
+      }
+    }).catch((error: any) => {
+      console.error("Redirect Auth Error:", error);
+      setLoading(false);
+    });
+
     // Fallback: If Firebase takes too long, stop loading
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 2000);
+    }, 1000);
 
     return () => {
       unsubscribeAuth();

@@ -188,7 +188,7 @@ export default function AuthPage() {
         </div>
 
         <AnimatePresence mode="wait">
-          {authLoading ? (
+          {authLoading && user ? (
             <motion.div
               key="loading-card"
               initial={{ opacity: 0 }}
@@ -206,7 +206,7 @@ export default function AuthPage() {
                 Click here if stuck
               </button>
             </motion.div>
-          ) : user ? (
+          ) : (user && role) ? (
             <motion.div
               key="welcome-card"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -223,7 +223,7 @@ export default function AuthPage() {
               </p>
               <div className="flex gap-4 justify-center">
                 <button
-                  onClick={() => router.push(getDashboardPath(role || 'buyer'))}
+                  onClick={() => router.push(getDashboardPath(role))}
                   className="py-4 px-8 bg-[#D4AF37] text-[#1A0F0B] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#F9F295] transition-all hover:scale-105 active:scale-95"
                 >
                   Proceed to Profile <ArrowRight className="w-4 h-4" />

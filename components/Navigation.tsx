@@ -19,6 +19,7 @@ export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isNavigatingAuth, setIsNavigatingAuth] = useState(false);
   const { totalItems } = useCart();
   const { user, userData, role } = useAuth();
   const { canInstall, install, isStandalone } = usePWA();
@@ -289,12 +290,29 @@ export function Navigation() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link
-                href="/auth"
-                className="px-4 py-2 bg-[#D4AF37] text-[#1A0F0B] text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setIsNavigatingAuth(true);
+                  router.push('/auth');
+                }}
+                disabled={isNavigatingAuth}
+                className="px-6 py-2.5 bg-[#D4AF37] text-[#1A0F0B] text-sm font-bold rounded-xl shadow-lg gold-glow-hover flex items-center gap-2 transition-all disabled:opacity-70"
               >
-                Sign In
-              </Link>
+                {isNavigatingAuth ? (
+                  <>
+                    <motion.div 
+                      animate={{ rotate: 360 }} 
+                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} 
+                      className="w-4 h-4 border-2 border-[#1A0F0B]/30 border-t-[#1A0F0B] rounded-full" 
+                    />
+                    <span className="animate-pulse">Entering...</span>
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </motion.button>
             )}
           </div>
         </div>
@@ -343,10 +361,16 @@ export function Navigation() {
             const Icon = item.icon;
 
             return (
-              <Link
+              <button
+                onClick={() => {
+                  if (!user) {
+                    setIsNavigatingAuth(true);
+                  }
+                  router.push(item.href);
+                }}
                 key={item.name}
-                href={item.href}
                 className="relative p-3 flex flex-col items-center gap-1.5"
+                disabled={isNavigatingAuth}
               >
                 {isActive && (
                   <motion.div
@@ -356,11 +380,19 @@ export function Navigation() {
                   />
                 )}
                 <div className="relative">
-                  <Icon
-                    className={`w-6 h-6 z-10 transition-colors ${
-                      isActive ? 'text-[#D4AF37]' : 'text-[#FFF3E0]/50'
-                    }`}
-                  />
+                  {isNavigatingAuth && item.href === '/auth' ? (
+                    <motion.div 
+                      animate={{ rotate: 360 }} 
+                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} 
+                      className="w-6 h-6 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full" 
+                    />
+                  ) : (
+                    <Icon
+                      className={`w-6 h-6 z-10 transition-colors ${
+                        isActive ? 'text-[#D4AF37]' : 'text-[#FFF3E0]/50'
+                      }`}
+                    />
+                  )}
                   {item.name === 'Cart' && totalItems > 0 && (
                     <span className="absolute -top-2 -right-2 w-4 h-4 bg-[#D4AF37] text-[#1A0F0B] text-[10px] font-bold flex items-center justify-center rounded-full shadow-md z-20">
                       {totalItems}
@@ -372,9 +404,9 @@ export function Navigation() {
                     isActive ? 'text-[#D4AF37]' : 'text-[#FFF3E0]/50'
                   }`}
                 >
-                  {item.name}
+                  {isNavigatingAuth && item.href === '/auth' ? '...' : item.name}
                 </span>
-              </Link>
+              </button>
             );
           })}
         </div>

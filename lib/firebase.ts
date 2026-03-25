@@ -1,6 +1,5 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore, initializeFirestore, persistentLocalCache } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -39,15 +38,18 @@ if (typeof window !== "undefined") {
 
 const storage = getStorage(app);
 
-// Initialize Analytics conditionally (only runs on browser)
-let analytics;
-if (typeof window !== "undefined") {
-  isSupported().then((supported) => {
-    if (supported) {
+// Initialize Analytics lazily to avoid blocking the initial mount
+let analytics: any = null;
+export const initAnalytics = async () => {
+  if (typeof window !== "undefined") {
+    const { getAnalytics, isSupported } = await import("firebase/analytics");
+    const supported = await isSupported();
+    if (supported && !analytics) {
       analytics = getAnalytics(app);
     }
-  });
-}
+    return analytics;
+  }
+};
 
 export { app, auth, db, storage, analytics };
 

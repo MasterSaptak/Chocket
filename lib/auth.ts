@@ -69,21 +69,12 @@ export async function signInWithGoogle(useRedirect: boolean = false): Promise<{ 
     }
     
     const result = await signInWithPopup(auth, googleProvider);
-    const userRef = doc(db, 'users', result.user.uid);
-    const userSnap = await getDoc(userRef);
-
-    let role: UserRole = 'buyer';
-
-    if (!userSnap.exists()) {
-      await createUserDocument(result.user, {
-        name: result.user.displayName || 'User',
-        phone: '',
-      });
-    } else {
-      role = userSnap.data().role as UserRole || 'buyer';
-    }
-
-    return { user: result.user, role };
+    
+    // 🔥 OPTIMIZATION: Return immediately after Google Auth.
+    // The AuthProvider's real-time snapshot and AuthPage's self-healing 
+    // will handle the database entry and role detection in the background.
+    // This removes 1-2 seconds of database "waiting" time.
+    return { user: result.user, role: 'buyer' };
   } catch (error: any) {
     if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
       return;

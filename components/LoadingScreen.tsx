@@ -14,11 +14,11 @@ export function LoadingScreen() {
           clearInterval(interval);
           return 100;
         }
-        // Accelerating progress
-        const increment = prev < 60 ? 3 : prev < 85 ? 5 : 8;
+        // Very fast progress
+        const increment = prev < 60 ? 5 : prev < 85 ? 10 : 15;
         return Math.min(prev + increment, 100);
       });
-    }, 50);
+    }, 10);
 
     return () => clearInterval(interval);
   }, []);
