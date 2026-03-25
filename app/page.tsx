@@ -1,6 +1,7 @@
 import { Hero } from '@/components/Hero';
 import { Categories } from '@/components/Categories';
 import { FeaturedProducts } from '@/components/FeaturedProducts';
+import { BrandShowcase } from '@/components/BrandShowcase';
 import { OffersSection } from '@/components/OffersSection';
 import { OccasionSection } from '@/components/OccasionSection';
 import { CrossBorderSection } from '@/components/CrossBorderSection';
@@ -11,6 +12,7 @@ export default function Home() {
       <Hero />
       <Categories />
       <FeaturedProducts />
+      <BrandShowcase />
       <OccasionSection />
       <OffersSection />
       <CrossBorderSection />

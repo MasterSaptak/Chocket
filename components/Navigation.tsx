@@ -46,9 +46,10 @@ export function Navigation() {
   };
 
   const navItems = [
-    { name: 'Home', href: '/', icon: Home },
     { name: 'Shop', href: '/shop', icon: Search },
-    { name: 'Cart', href: '/cart', icon: ShoppingBag },
+    { name: 'Brands', href: '/brands', icon: Search },
+    { name: 'Gifts', href: '/gifts', icon: ShoppingBag },
+    { name: 'Orders', href: user ? '/profile?tab=orders' : '/auth', icon: ShoppingBag },
     { name: 'Profile', href: user ? '/profile' : '/auth', icon: User },
   ];
 
@@ -95,35 +96,7 @@ export function Navigation() {
                 />
               </Link>
             ))}
-
-            {/* Role-based links */}
-            {role === 'seller' && (
-              <Link
-                href="/seller/dashboard"
-                className="text-sm font-medium text-emerald-400/70 hover:text-emerald-400 transition-all duration-300 flex items-center gap-1"
-              >
-                <Store className="w-3.5 h-3.5" />
-                Seller
-              </Link>
-            )}
-            {(role === 'manager' || role === 'primeadmin') && (
-              <Link
-                href="/admin"
-                className="text-sm font-medium text-blue-400/70 hover:text-blue-400 transition-all duration-300 flex items-center gap-1"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                Manager
-              </Link>
-            )}
-            {role === 'primeadmin' && (
-              <Link
-                href="/superadmin/dashboard"
-                className="text-sm font-medium text-purple-400/70 hover:text-purple-400 transition-all duration-300 flex items-center gap-1"
-              >
-                <Crown className="w-3.5 h-3.5" />
-                Prime Admin
-              </Link>
-            )}
+            {/* Role-based links — hidden from public nav, accessible via dashboards */}
           </nav>
 
           <div className="flex items-center gap-4">

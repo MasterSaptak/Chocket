@@ -55,13 +55,13 @@ export function FeaturedProducts() {
           >
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-5 h-5 text-[#D4AF37] animate-heartbeat" />
-              <span className="text-sm text-[#D4AF37] font-medium tracking-[0.2em] uppercase">Handpicked</span>
+              <span className="text-sm text-[#D4AF37] font-medium tracking-[0.2em] uppercase">Editor&apos;s Pick</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-display font-bold text-[#FFF3E0] mb-4">
-              Curated <span className="gold-text-gradient italic font-light">for You</span>
+              The <span className="gold-text-gradient italic font-light">Collection</span>
             </h2>
             <p className="text-[#FFF3E0]/40 text-lg">
-              Explore our handpicked selection of the finest chocolates and desserts, crafted to perfection.
+              Handpicked by our editors — the finest artisan chocolates from the world&apos;s most celebrated chocolatiers.
             </p>
           </motion.div>
           <motion.div
@@ -74,7 +74,7 @@ export function FeaturedProducts() {
               href="/shop"
               className="group inline-flex items-center justify-center px-6 py-3 rounded-full glass-dark text-[#D4AF37] font-medium hover:bg-[#D4AF37]/10 transition-all border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 hover:scale-105 duration-300 text-sm"
             >
-              View All Products
+              Explore Collection
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>

@@ -2,10 +2,9 @@
 
 import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, ChevronDown } from 'lucide-react';
+import { ArrowRight, ChevronDown, Globe, Shield, Package, Award } from 'lucide-react';
 import Link from 'next/link';
 import { useRef } from 'react';
-import { InstallPWA } from './InstallPWA';
 
 /* ── Animated Choco Globe — Earth as a chocolate ball ── */
 function ChocoGlobe() {
@@ -13,15 +12,15 @@ function ChocoGlobe() {
     <motion.div
       className="inline-block relative align-middle group cursor-pointer"
       style={{ width: '1.2em', height: '1.2em', verticalAlign: 'middle' }}
-      animate={{ 
+      animate={{
         y: [-2, 4, -2],
         rotate: [0, 5, -5, 0],
         scale: [1, 1.08, 1]
       }}
-      transition={{ 
-        duration: 6, 
-        repeat: Infinity, 
-        ease: 'easeInOut' 
+      transition={{
+        duration: 6,
+        repeat: Infinity,
+        ease: 'easeInOut'
       }}
       whileHover={{ scale: 1.2, rotate: 15 }}
     >
@@ -53,20 +52,20 @@ function ChocoGlobe() {
           </clipPath>
 
           <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
             <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
 
         {/* Outer Halo */}
-        <motion.circle 
-          cx="60" cy="60" r="58" 
-          fill="none" 
-          stroke="#D4AF37" 
-          strokeWidth="0.5" 
+        <motion.circle
+          cx="60" cy="60" r="58"
+          fill="none"
+          stroke="#D4AF37"
+          strokeWidth="0.5"
           opacity="0.2"
           animate={{ opacity: [0.1, 0.4, 0.1], scale: [0.95, 1.05, 0.95] }}
           transition={{ duration: 3, repeat: Infinity }}
@@ -88,7 +87,7 @@ function ChocoGlobe() {
             <path d="M60,42 Q66,38 70,42 Q74,50 72,60 Q70,68 66,70 Q62,68 60,60 Q58,50 60,42Z" fill="url(#goldContinent)" opacity="0.85" />
             <path d="M72,26 Q78,22 86,26 Q92,32 90,38 Q86,44 82,46 Q76,48 74,42 Q70,36 72,26Z" fill="url(#goldContinent)" opacity="0.9" />
             <path d="M84,60 Q88,56 92,60 Q94,64 90,68 Q86,66 84,60Z" fill="url(#goldContinent)" opacity="0.85" />
-            
+
             {/* Set 2 (Offset by 120 for seamless wrap) */}
             <g transform="translate(120, 0)">
               <path d="M28,30 Q32,22 42,24 Q48,20 52,26 Q50,34 44,38 Q38,42 32,38 Q26,36 28,30Z" fill="url(#goldContinent)" opacity="0.9" />
@@ -114,10 +113,10 @@ function ChocoGlobe() {
         />
 
         {/* Specular glints */}
-        <motion.ellipse 
-          cx="42" cy="36" rx="12" ry="8" 
-          fill="white" 
-          animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.1, 1] }} 
+        <motion.ellipse
+          cx="42" cy="36" rx="12" ry="8"
+          fill="white"
+          animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.1, 1] }}
           transition={{ duration: 4, repeat: Infinity }}
         />
       </svg>
@@ -216,6 +215,49 @@ function LiquidChocolateDrip() {
   );
 }
 
+/* ── Trust Strip ── */
+function TrustStrip() {
+  const items = [
+    { icon: Globe, label: 'Ships Worldwide', sub: '50+ Countries' },
+    { icon: Shield, label: 'Secure Payments', sub: '256-bit SSL' },
+    { icon: Package, label: 'Premium Packaging', sub: 'Gift-Ready' },
+    { icon: Award, label: 'Trusted Brands', sub: '200+ Artisans' },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="relative z-30 -mt-6"
+    >
+      <div className="container mx-auto px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-0 p-6 md:p-0 md:py-8 rounded-3xl md:rounded-none bg-[#1A0F0B]/80 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none border border-[#3E2723]/50 md:border-0 md:border-y md:border-[#3E2723]/30">
+          {items.map((item, i) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1, duration: 0.5 }}
+              className="flex items-center gap-4 justify-center py-3 md:py-0 group cursor-default"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/10 group-hover:border-[#D4AF37]/30 transition-all duration-500">
+                <item.icon className="w-4.5 h-4.5 text-[#D4AF37]/70 group-hover:text-[#D4AF37] transition-colors" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#FFF3E0]/80 tracking-wide">{item.label}</p>
+                <p className="text-[10px] text-[#FFF3E0]/30 font-medium">{item.sub}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ── Main Hero Component ── */
 export function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -229,150 +271,153 @@ export function Hero() {
   const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
 
   return (
-    <section
-      ref={containerRef}
-      className="relative overflow-hidden min-h-screen flex items-center justify-center -mt-20 md:-mt-24 pt-20 md:pt-24"
-    >
-      {/* Parallax Background Image */}
-      <motion.div className="absolute inset-0 z-0" style={{ y: bgY }}>
-        <Image
-          src="/hero-bg.png"
-          alt="Luxurious chocolate swirl background with truffles and cocoa"
-          fill
-          className="object-cover object-center"
-          style={{ objectPosition: '50% 55%' }}
-          priority
-          quality={90}
-        />
-        {/* Subtle dark overlay — lets the warm chocolates breathe */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0D0705]/60 via-[#0D0705]/20 to-[#0D0705]/85" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0D0705]/50 via-transparent to-[#0D0705]/50" />
-        {/* Warm amber tint to blend the image with the palette */}
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 40% 60%, rgba(101,55,27,0.15) 0%, transparent 70%)' }} />
-      </motion.div>
-
-      {/* Radial vignette */}
-      <div className="absolute inset-0 z-[1]" style={{
-        background: 'radial-gradient(ellipse at center, transparent 40%, #0D0705 100%)',
-      }} />
-
-      {/* Gold dust */}
-      <GoldDustParticles />
-
-      {/* Main content */}
-      <motion.div
-        className="container mx-auto px-6 relative z-20 text-center flex flex-col items-center"
-        style={{ y: textY, opacity }}
+    <>
+      <section
+        ref={containerRef}
+        className="relative overflow-hidden min-h-screen flex items-center justify-center -mt-20 md:-mt-24 pt-20 md:pt-24"
       >
-        {/* Premium badge */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-10 inline-flex items-center gap-3 px-6 py-2.5 rounded-full glass-dark border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold tracking-[0.4em] uppercase shadow-2xl shadow-[#D4AF37]/5"
-        >
-          <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
-          <span>EST. 2024 • PREMIUM ARTISAN CHOCOLATES</span>
-          <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+        {/* Parallax Background Image */}
+        <motion.div className="absolute inset-0 z-0" style={{ y: bgY }}>
+          <Image
+            src="/hero-bg.png"
+            alt="Luxurious chocolate swirl background with truffles and cocoa"
+            fill
+            className="object-cover object-center"
+            style={{ objectPosition: '50% 55%' }}
+            priority
+            quality={90}
+          />
+          {/* Subtle dark overlay — lets the warm chocolates breathe */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0D0705]/60 via-[#0D0705]/20 to-[#0D0705]/85" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0D0705]/50 via-transparent to-[#0D0705]/50" />
+          {/* Warm amber tint to blend the image with the palette */}
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 40% 60%, rgba(101,55,27,0.15) 0%, transparent 70%)' }} />
         </motion.div>
 
-        {/* Main heading */}
-        <motion.h1
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-display font-black leading-[1.1] mb-6 tracking-tight text-[#FFF3E0] majestic-shadow"
-        >
-          Deliver <ChocoGlobe />{' '}
-          <motion.span
-            className="gold-text-gradient inline-block font-majestic px-2"
-            animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            Happiness
-          </motion.span>
-          <br />
-          <span className="text-[#FFF3E0]/60 text-[0.45em] font-display font-light tracking-[0.2em]">
-            WORLDWIDE
-          </span>
-        </motion.h1>
+        {/* Radial vignette */}
+        <div className="absolute inset-0 z-[1]" style={{
+          background: 'radial-gradient(ellipse at center, transparent 40%, #0D0705 100%)',
+        }} />
 
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-lg md:text-xl text-[#FFF3E0]/60 mb-14 max-w-2xl mx-auto leading-relaxed font-light"
-        >
-          Experience the world&apos;s finest artisan chocolates — handcrafted with passion,
-          wrapped in elegance, and delivered to your doorstep across borders.
-        </motion.p>
+        {/* Gold dust */}
+        <GoldDustParticles />
 
-        {/* CTA Buttons */}
+        {/* Main content */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-5"
+          className="container mx-auto px-6 relative z-20 text-center flex flex-col items-center"
+          style={{ y: textY, opacity }}
         >
-          <Link
-            href="/shop"
-            className="group relative inline-flex items-center justify-center px-10 py-4 rounded-full gold-gradient text-[#1A0F0B] font-semibold text-lg transition-all duration-500 hover:scale-110 active:scale-95 cta-glow overflow-hidden"
+          {/* Premium badge */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-10 inline-flex items-center gap-3 px-6 py-2.5 rounded-full glass-dark border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold tracking-[0.4em] uppercase shadow-2xl shadow-[#D4AF37]/5"
           >
-            <span className="relative z-10 flex items-center gap-3">
-              Explore Chocolates
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-500" />
-            </span>
-            <div className="absolute inset-0 bg-white/25 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out rounded-full" />
-          </Link>
+            <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+            <span>The Global Chocolate Marketplace</span>
+            <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+          </motion.div>
 
-          <Link
-            href="/shop?category=gifts"
-            className="group inline-flex items-center justify-center px-10 py-4 rounded-full glass-dark text-[#FFF3E0] font-medium text-lg hover:bg-white/10 transition-all duration-500 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 hover:scale-105"
+          {/* Main heading */}
+          <motion.h1
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-display font-black leading-[1.1] mb-6 tracking-tight text-[#FFF3E0] majestic-shadow"
           >
-            <span className="flex items-center gap-2">
-              🎁 Send as Gift
+            The World&apos;s Finest <ChocoGlobe />{' '}
+            <motion.span
+              className="gold-text-gradient inline-block font-majestic px-2"
+              animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              Chocolates.
+            </motion.span>
+            <br />
+            <span className="text-[#FFF3E0]/60 text-[0.45em] font-display font-light tracking-[0.2em]">
+              ONE PLACE
             </span>
-          </Link>
+          </motion.h1>
 
-          <InstallPWA />
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-lg md:text-xl text-[#FFF3E0]/60 mb-14 max-w-2xl mx-auto leading-relaxed font-light"
+          >
+            Curated from top global chocolatiers. Delivered fresh, fast,
+            and beautifully — straight to your doorstep.
+          </motion.p>
+
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-5"
+          >
+            <Link
+              href="/shop"
+              className="group relative inline-flex items-center justify-center px-12 py-4.5 rounded-full gold-gradient text-[#1A0F0B] font-semibold text-lg transition-all duration-500 hover:scale-110 active:scale-95 cta-glow overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center gap-3">
+                Shop Collection
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-500" />
+              </span>
+              <div className="absolute inset-0 bg-white/25 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out rounded-full" />
+            </Link>
+
+            <Link
+              href="/shop?category=gifts"
+              className="group inline-flex items-center justify-center px-10 py-4 rounded-full glass-dark text-[#FFF3E0] font-medium text-lg hover:bg-white/10 transition-all duration-500 border border-[#D4AF37]/30 hover:border-[#D4AF37]/60 hover:scale-105 hover:shadow-[0_0_30px_rgba(212,175,55,0.15)]"
+            >
+              <span className="flex items-center gap-2">
+                🎁 Gift Luxury
+              </span>
+            </Link>
+          </motion.div>
+
+          {/* Origin badges */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.3 }}
+            className="mt-24 flex flex-wrap justify-center items-center gap-x-12 gap-y-4 text-[#FFF3E0]/30 text-[10px] tracking-[0.4em] uppercase"
+          >
+            {['🇧🇪 Belgium', '🇨🇭 Swiss', '🇫🇷 France', '🇮🇹 Italy'].map((origin, i) => (
+              <motion.span
+                key={origin}
+                className="flex items-center gap-2 hover:text-[#D4AF37]/60 transition-colors cursor-default"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.5 + i * 0.15 }}
+              >
+                <span className="w-1 h-1 rounded-full bg-[#D4AF37]/40" />
+                {origin}
+              </motion.span>
+            ))}
+          </motion.div>
         </motion.div>
 
-        {/* Trust badges */}
+        {/* Scroll indicator */}
         <motion.div
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1.3 }}
-          className="mt-24 flex flex-wrap justify-center items-center gap-x-12 gap-y-4 text-[#FFF3E0]/30 text-[10px] tracking-[0.4em] uppercase"
+          transition={{ delay: 2 }}
         >
-          {['🇧🇪 Belgium', '🇨🇭 Swiss', '🇫🇷 France', '🇮🇹 Italy'].map((origin, i) => (
-            <motion.span
-              key={origin}
-              className="flex items-center gap-2 hover:text-[#D4AF37]/60 transition-colors cursor-default"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.5 + i * 0.15 }}
-            >
-              <span className="w-1 h-1 rounded-full bg-[#D4AF37]/40" />
-              {origin}
-            </motion.span>
-          ))}
+          <span className="text-[#D4AF37]/40 text-[9px] tracking-[0.5em] uppercase font-bold">Scroll</span>
+          <ChevronDown className="w-4 h-4 text-[#D4AF37]/40 scroll-indicator" />
         </motion.div>
-      </motion.div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-      >
-        <span className="text-[#D4AF37]/40 text-[9px] tracking-[0.5em] uppercase font-bold">Scroll</span>
-        <ChevronDown className="w-4 h-4 text-[#D4AF37]/40 scroll-indicator" />
-      </motion.div>
+        {/* Liquid drip transition */}
+        <LiquidChocolateDrip />
+      </section>
 
-      {/* Liquid drip transition */}
-      <LiquidChocolateDrip />
-    </section>
+      {/* Trust Strip — below hero */}
+      <TrustStrip />
+    </>
   );
 }

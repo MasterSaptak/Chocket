@@ -15,20 +15,33 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center bg-background px-6">
-        <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
-          <ShoppingBag className="w-10 h-10 text-muted-foreground" />
-        </div>
-        <h1 className="text-3xl font-display font-bold text-primary mb-4">Your cart is empty</h1>
-        <p className="text-muted-foreground mb-8 text-center max-w-md">
-          Looks like you haven&apos;t added any sweet treats to your cart yet.
-        </p>
-        <Link
-          href="/shop"
-          className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-primary text-primary-foreground font-semibold hover:bg-accent hover:text-accent-foreground transition-all shadow-md"
+      <div className="min-h-[70vh] flex flex-col items-center justify-center bg-[#0D0705] px-6 relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#D4AF37]/5 rounded-full blur-[150px] pointer-events-none" />
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6 }}
+          className="relative z-10 text-center"
         >
-          Start Shopping
-        </Link>
+          <div className="w-24 h-24 bg-[#1A0F0B] border border-[#3E2723] rounded-full flex items-center justify-center mx-auto mb-8">
+            <ShoppingBag className="w-10 h-10 text-[#D4AF37]/40" />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-[#FFF3E0] mb-4">
+            Your cart is empty
+          </h1>
+          <p className="text-[#FFF3E0]/40 mb-10 text-center max-w-md text-lg leading-relaxed">
+            Your luxury chocolate journey awaits — explore our curated collection of the world&apos;s finest artisan chocolates.
+          </p>
+          <Link
+            href="/shop"
+            className="group inline-flex items-center justify-center gap-3 px-10 py-4 rounded-full gold-gradient text-[#1A0F0B] font-semibold text-lg hover:scale-110 transition-all shadow-lg hover:shadow-[0_0_30px_rgba(212,175,55,0.3)] active:scale-95"
+          >
+            Shop Collection
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-500" />
+          </Link>
+        </motion.div>
       </div>
     );
   }

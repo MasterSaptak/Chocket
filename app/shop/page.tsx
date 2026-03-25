@@ -17,8 +17,12 @@ export default function ShopPage() {
   const [minRating, setMinRating] = useState(0);
   const [onlyDiscounts, setOnlyDiscounts] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
+  const [activeBrand, setActiveBrand] = useState('All');
+  const [activeType, setActiveType] = useState('All');
   
   const categories = ['All', 'Imported', 'Premium', 'Budget', 'Cookies', 'Desserts'];
+  const brands = ['All', 'Godiva', 'Lindt', 'Ferrero', 'Valrhona', 'Toblerone', 'Neuhaus'];
+  const types = ['All', 'Dark', 'Milk', 'White', 'Truffle', 'Praline', 'Bar'];
 
   useEffect(() => {
     async function loadProducts() {
@@ -68,6 +72,8 @@ export default function ShopPage() {
     setMinRating(0);
     setOnlyDiscounts(false);
     setSortBy('newest');
+    setActiveBrand('All');
+    setActiveType('All');
   };
 
   return (
@@ -77,11 +83,11 @@ export default function ShopPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-primary mb-4">
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-[#FFF3E0] mb-4">
               Our Collection
             </h1>
-            <p className="text-muted-foreground text-lg max-w-xl">
-              Indulge in our wide variety of premium chocolates, cookies, and desserts sourced from around the world.
+            <p className="text-[#FFF3E0]/40 text-lg max-w-xl">
+              Artisan chocolates from the world&apos;s finest brands — all in one place.
             </p>
           </div>
           
@@ -217,6 +223,55 @@ export default function ShopPage() {
                     <X className="w-4 h-4" />
                     Clear All Filters
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Brand & Type Filters — second row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-8 pt-8 border-t border-border/30">
+              {/* Brand Filter */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-semibold">
+                  <Tag className="w-4 h-4" />
+                  <h3>Brand</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {brands.map((brand) => (
+                    <button
+                      key={brand}
+                      onClick={() => setActiveBrand(brand)}
+                      className={`px-4 py-2 rounded-full border text-sm transition-all ${
+                        activeBrand === brand
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                          : 'border-border text-muted-foreground hover:border-primary/30'
+                      }`}
+                    >
+                      {brand}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Type Filter */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-semibold">
+                  <Filter className="w-4 h-4" />
+                  <h3>Type</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {types.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setActiveType(type)}
+                      className={`px-4 py-2 rounded-full border text-sm transition-all ${
+                        activeType === type
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md'
+                          : 'border-border text-muted-foreground hover:border-primary/30'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

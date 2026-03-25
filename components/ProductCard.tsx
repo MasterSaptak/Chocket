@@ -129,7 +129,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </motion.button>
 
       {/* Image */}
-      <Link href={`/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden bg-[#2C1A12]/50">
+      <div onClick={() => window.location.href = `/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden bg-[#2C1A12]/50 cursor-pointer">
         <Image
           src={product.images[0] || 'https://picsum.photos/seed/placeholder/600/600'}
           alt={product.name}
@@ -150,6 +150,7 @@ export function ProductCard({ product }: ProductCardProps) {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.3 }}
               className="absolute bottom-4 left-4 right-4 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={handleBuyNow}
@@ -173,7 +174,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </motion.div>
           )}
         </AnimatePresence>
-      </Link>
+      </div>
 
       {/* Content */}
       <div className="p-5 space-y-2">
