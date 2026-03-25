@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { db, auth } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import Image from 'next/image';
+import { processOrderRewards } from '@/lib/rewards-service';
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
@@ -39,6 +40,9 @@ export default function CheckoutPage() {
   const nextStep = () => setStep(s => Math.min(s + 1, 3));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
+  const shippingCost = totalPrice > 2000 ? 0 : 50;
+  const finalTotal = totalPrice + shippingCost;
+
   const handlePlaceOrder = async () => {
     if (items.length === 0) {
       toast.error('Your cart is empty');
@@ -67,8 +71,8 @@ export default function CheckoutPage() {
           images: item.product.images,
         })),
         subtotal: totalPrice,
-        shipping: totalPrice > 2000 ? 0 : 50,
-        totalAmount: totalPrice + (totalPrice > 2000 ? 0 : 50),
+        shipping: shippingCost,
+        totalAmount: finalTotal,
         paymentMethod,
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -76,9 +80,14 @@ export default function CheckoutPage() {
 
       await addDoc(collection(db, 'orders'), orderData);
       
+      // Process Rewards (1 INR = 1 Point + Bonus)
+      if (auth.currentUser?.uid) {
+        await processOrderRewards(auth.currentUser.uid, finalTotal);
+      }
+      
       setIsSuccess(true);
       clearCart();
-      toast.success('Order placed successfully!');
+      toast.success('Order placed successfully! Choco Points added.');
     } catch (error) {
       console.error('Error placing order:', error);
       toast.error('Failed to place order. Please try again.');
@@ -86,9 +95,6 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
-
-  const shippingCost = totalPrice > 2000 ? 0 : 50;
-  const finalTotal = totalPrice + shippingCost;
 
   if (isSuccess) {
     return (

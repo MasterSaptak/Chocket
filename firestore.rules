@@ -108,6 +108,12 @@ service cloud.firestore {
         isSuperAdmin()
       );
       
+      // Points history subcollection
+      match /points_history/{transactionId} {
+        allow read: if isOwner(userId) || isManager();
+        allow create: if isOwner(userId) || isManager();
+      }
+
       // Only Super Admin can delete users
       allow delete: if isSuperAdmin();
     }
@@ -251,6 +257,7 @@ service cloud.firestore {
       
       // Only managers can delete reviews
       allow delete: if isManager();
+    }
 
     // ===============================================================
     // NEWSLETTER COLLECTION
@@ -269,6 +276,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
 
     // ===============================================================
     // BRANDS COLLECTION

@@ -55,7 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: 'buyer',
             status: 'active',
             isVerified: result.user.emailVerified || false,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            choco_points: 0,
+            total_points_earned: 0,
+            tier: 'bronze'
           });
         }
       }

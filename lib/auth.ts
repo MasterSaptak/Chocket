@@ -105,6 +105,9 @@ async function createUserDocument(
     isVerified: firebaseUser.emailVerified || false,
     profileImage: firebaseUser.photoURL || '',
     createdAt: serverTimestamp() as any,
+    choco_points: 0,
+    total_points_earned: 0,
+    tier: 'bronze',
   };
   await setDoc(userRef, userData);
 }

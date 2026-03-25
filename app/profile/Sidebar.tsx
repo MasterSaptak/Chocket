@@ -114,11 +114,17 @@ export default function ProfileSidebar() {
               <p className="text-[#FFF3E0] font-bold text-sm truncate max-w-[140px]">
                 {userData?.name || user?.displayName || 'Chocket Guest'}
               </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {getTierIcon(userData?.tier)}
-                <span className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold">
-                  {userData?.tier || 'Bronze'} Member
-                </span>
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-3 mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  {getTierIcon(userData?.tier)}
+                  <span className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold">
+                    {userData?.tier || 'Bronze'} Member
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#D4AF37]/10 rounded-full border border-[#D4AF37]/20">
+                  <span className="text-[10px]">🍫</span>
+                  <span className="text-[10px] font-bold text-[#D4AF37]">{(userData?.choco_points || 0).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </div>

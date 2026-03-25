@@ -10,6 +10,7 @@ import Security from './Security';
 import Sessions from './Sessions';
 import Preferences from './Preferences';
 import Activity from './Activity';
+import Rewards from './Rewards';
 import { Loader2, Construction } from 'lucide-react';
 
 export default function CommandCenter() {
@@ -22,6 +23,7 @@ export default function CommandCenter() {
       case 'addresses': return <Addresses />;
       case 'security': return <Security />;
       case 'sessions': return <Sessions />;
+      case 'rewards': return <Rewards />;
       case 'settings':
       case 'localization': return <Preferences />;
       case 'orders':

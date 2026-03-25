@@ -21,6 +21,8 @@ export interface ChocketUser {
   available_balance?: number;
   tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
   lastUpdated?: string;
+  choco_points: number;
+  total_points_earned: number;
 }
 
 // ===== SELLER APPLICATION =====

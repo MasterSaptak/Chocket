@@ -183,6 +183,19 @@ export function Navigation() {
               )}
             </Link>
 
+            {/* Choco Points Display */}
+            {user && (
+              <Link 
+                href="/profile?section=rewards"
+                className="hidden lg:flex items-center gap-2 px-4 py-2 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full hover:bg-[#D4AF37]/20 transition-all group"
+              >
+                <span className="text-lg group-hover:scale-125 transition-transform duration-500">🍫</span>
+                <span className="text-sm font-bold text-[#D4AF37]">
+                  {(userData?.choco_points || 0).toLocaleString()}
+                </span>
+              </Link>
+            )}
+
             {/* User avatar / Auth button */}
             {user ? (
               <div className="relative">
@@ -205,9 +218,9 @@ export function Navigation() {
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute right-0 mt-2 w-64 bg-[#1A0F0B] rounded-2xl shadow-2xl border border-[#3E2723] overflow-hidden z-50"
+                        className="absolute right-0 mt-2 w-72 bg-[#1A0F0B] rounded-2xl shadow-2xl border border-[#3E2723] overflow-hidden z-50 px-1 pt-1 pb-2"
                       >
-                        <div className="p-4 border-b border-[#3E2723] bg-[#0D0705]/50">
+                        <div className="p-4 border-b border-[#3E2723] bg-[#0D0705]/50 rounded-t-xl mb-2">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-semibold text-[#FFF3E0] text-sm truncate">
                               {userData?.name || user.displayName || 'Loading...'}
@@ -216,7 +229,22 @@ export function Navigation() {
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" strokeWidth={3} />
                             )}
                           </div>
-                          <p className="text-xs text-[#FFF3E0]/40 truncate">{user.email || 'No email'}</p>
+                          <p className="text-xs text-[#FFF3E0]/40 truncate mb-4">{user.email || 'No email'}</p>
+                          
+                          {/* Points Mini-Card in Dropdown */}
+                          <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-xl p-3 flex items-center justify-between">
+                            <div>
+                               <p className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest mb-0.5">Your Balance</p>
+                               <p className="text-lg font-display font-bold text-[#FFF3E0]">{(userData?.choco_points || 0).toLocaleString()} 🍫</p>
+                            </div>
+                            <Link 
+                              href="/profile?section=rewards" 
+                              onClick={() => setShowUserMenu(false)}
+                              className="text-[10px] font-bold text-[#D4AF37] hover:underline uppercase tracking-widest"
+                            >
+                              View Rewards
+                            </Link>
+                          </div>
                           
                           <div className="flex flex-wrap gap-2 mt-3">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
@@ -228,12 +256,6 @@ export function Navigation() {
                               <Shield className="w-2.5 h-2.5" />
                               {getRoleDisplayName(role)}
                             </span>
-                            
-                            {!user.emailVerified && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border bg-red-500/10 text-red-400 border-red-500/20">
-                                Unverified
-                              </span>
-                            )}
                           </div>
                         </div>
                         <div className="p-2">
