@@ -30,6 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('--- 🛡️ AUTH HANDSHAKE START ---');
+    
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       console.log('🔄 Auth State Changed:', firebaseUser ? `User: ${firebaseUser.uid}` : 'No user');
       setUser(firebaseUser);
