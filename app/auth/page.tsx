@@ -28,7 +28,7 @@ export default function AuthPage() {
   // Unified Redirection Logic
   useEffect(() => {
     if (user && role) {
-      if (!user.emailVerified && role !== 'primeadmin' && role !== 'manager') {
+      if (!user.emailVerified) {
         router.push('/verify-email');
       }
     } else if (user && !role && !authLoading) {
@@ -77,8 +77,8 @@ export default function AuthPage() {
         const firebaseUser = await loginWithEmail(email, password);
         const userRole = await getUserRole(firebaseUser.uid);
 
-        if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'manager') {
-          toast.error('Please verify your email.');
+        if (!firebaseUser.emailVerified) {
+          toast.error('Please verify your email before continuing.');
           router.push('/verify-email');
           setIsLoading(false);
           return;
@@ -93,6 +93,8 @@ export default function AuthPage() {
         message = 'Invalid email or password. Please try again.';
       } else if (error.code === 'auth/too-many-requests') {
         message = 'Too many failed attempts. Please try again later.';
+      } else if (error.code === 'auth/email-already-in-use') {
+        message = 'An account with this email already exists. Please sign in instead.';
       } else if (error.message?.includes('offline')) {
         message = 'You appear to be offline. Please check your connection.';
       }
@@ -109,7 +111,8 @@ export default function AuthPage() {
       const firebaseUser = await signInWithGoogle();
       const userRole = await getUserRole(firebaseUser.uid);
       
-      if (!firebaseUser.emailVerified && userRole !== 'primeadmin' && userRole !== 'manager') {
+      if (!firebaseUser.emailVerified) {
+        toast.error('Please verify your email before continuing.');
         router.push('/verify-email');
         setIsLoading(false);
         return;

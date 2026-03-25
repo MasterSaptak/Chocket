@@ -108,8 +108,8 @@ service cloud.firestore {
         isSuperAdmin()
       );
       
-      // No one can delete user documents
-      allow delete: if false;
+      // Only Super Admin can delete users
+      allow delete: if isSuperAdmin();
     }
 
     // ===============================================================

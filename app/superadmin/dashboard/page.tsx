@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Shield, Crown, Users, ArrowUpCircle, Ban, CheckCircle,
-  Loader2, LogOut, Search, ChevronRight, AlertTriangle, UserCheck
+  Loader2, LogOut, Search, ChevronRight, AlertTriangle, UserCheck, Trash2
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { RouteGuard } from '@/components/RouteGuard';
 import { logout } from '@/lib/auth';
-import { subscribeToUsers, updateUserRole, updateUserStatus } from '@/lib/users';
+import { subscribeToUsers, updateUserRole, updateUserStatus, deleteUserDocument } from '@/lib/users';
 import { getRoleDisplayName, getRoleColor, getAllowedPromotionTargets, isSuperAdmin } from '@/lib/rbac';
 import { logAction } from '@/lib/audit';
 import { toast } from 'sonner';
@@ -92,6 +92,37 @@ function SuperAdminContent() {
       toast.success('User activated');
     } catch {
       toast.error('Failed to activate user');
+    }
+  };
+
+  const handleDelete = async (uid: string) => {
+    if (!userData) return;
+    if (uid === userData.uid) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
+    if (window.confirm("Are you sure you want to completely delete this user from both the database AND Firebase Authentication?")) {
+      try {
+        // 1. First trigger log event locally (so it records before the user is gone)
+        await logAction({
+          action: 'delete_user',
+          performedBy: userData.uid,
+          role: 'primeadmin',
+          targetId: uid,
+          bypass: true,
+        });
+        
+        // 2. Call new backend API that deletes them from BOTH Auth and Firestore
+        const response = await fetch(`/api/admin/users/${uid}`, { method: 'DELETE' });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete from server');
+        }
+        
+        toast.success('User completely un-registered & deleted');
+      } catch (err: any) {
+        toast.error('Failed to fully delete user. ' + err.message);
+      }
     }
   };
 
@@ -286,54 +317,16 @@ function SuperAdminContent() {
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {promotingUser === u.uid ? (
-                              <AnimatePresence>
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  className="flex items-center gap-1"
+                                <select
+                                  value={u.role}
+                                  onChange={(e) => handlePromote(u.uid, e.target.value as UserRole)}
+                                  className="bg-[#1A0F0B] border border-white/10 rounded-lg px-2 py-1.5 text-xs font-medium focus:outline-none focus:border-purple-500/50 text-[#FFF3E0]"
                                 >
-                                  {u.role !== 'seller' && (
-                                    <button onClick={() => handlePromote(u.uid, 'seller')}
-                                      className="px-2 py-1 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20">
-                                      Seller
-                                    </button>
-                                  )}
-                                  {u.role !== 'manager' && (
-                                    <button onClick={() => handlePromote(u.uid, 'manager')}
-                                      className="px-2 py-1 text-[10px] font-bold bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20 hover:bg-blue-500/20">
-                                      Manager
-                                    </button>
-                                  )}
-                                  {u.role !== 'primeadmin' && (
-                                    <button onClick={() => handlePromote(u.uid, 'primeadmin')}
-                                      className="px-2 py-1 text-[10px] font-bold bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20 hover:bg-purple-500/20">
-                                      Prime Admin
-                                    </button>
-                                  )}
-                                  {u.role !== 'buyer' && (
-                                    <button onClick={() => handlePromote(u.uid, 'buyer')}
-                                      className="px-2 py-1 text-[10px] font-bold bg-[#D4AF37]/10 text-[#D4AF37] rounded-lg border border-[#D4AF37]/20 hover:bg-[#D4AF37]/20">
-                                      Buyer
-                                    </button>
-                                  )}
-                                  <button onClick={() => setPromotingUser(null)}
-                                    className="px-2 py-1 text-[10px] text-[#FFF3E0]/40 hover:text-[#FFF3E0]">
-                                    ✕
-                                  </button>
-                                </motion.div>
-                              </AnimatePresence>
-                            ) : (
-                              <>
-                                {u.role !== 'primeadmin' && (
-                                  <button
-                                    onClick={() => setPromotingUser(u.uid)}
-                                    className="px-3 py-1.5 text-xs font-semibold bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors border border-purple-500/20 flex items-center gap-1"
-                                  >
-                                    <ArrowUpCircle className="w-3 h-3" /> Promote
-                                  </button>
-                                )}
+                                  <option value="buyer">Buyer</option>
+                                  <option value="seller">Seller</option>
+                                  <option value="manager">Manager</option>
+                                  {u.role === 'primeadmin' && <option value="primeadmin">Prime Admin</option>}
+                                </select>
                                 {u.status === 'active' ? (
                                   <button
                                     onClick={() => handleBan(u.uid)}
@@ -349,8 +342,15 @@ function SuperAdminContent() {
                                     <UserCheck className="w-3 h-3" /> Activate
                                   </button>
                                 )}
-                              </>
-                            )}
+                                {u.uid !== userData?.uid && (
+                                  <button
+                                    onClick={() => handleDelete(u.uid)}
+                                    title="Delete User"
+                                    className="p-1.5 text-xs font-semibold bg-red-500/5 text-red-500 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors border border-red-500/10 hover:border-red-500/30 flex items-center gap-1"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
                           </div>
                         </td>
                       </tr>

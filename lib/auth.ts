@@ -40,41 +40,12 @@ export async function registerWithEmail(
   // Create Firestore user document (default role: buyer)
   await createUserDocument(cred.user, { name, phone });
 
-  // Send email verification using Custom Backend API
+  // Send Firebase Email Verification natively
   try {
-    const idToken = await cred.user.getIdToken();
-
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-    const res = await fetch(`${baseUrl}/api/send-verification`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const data = await res.json();
-
-    if (!res.ok && data.error?.includes('Resend API key missing')) {
-      console.warn("Resend API key missing. Falling back to default Firebase sender...");
-      const actionCodeSettings = {
-        url: `${baseUrl}/verify-email`,
-        handleCodeInApp: false,
-      };
-      await sendEmailVerification(cred.user, actionCodeSettings);
-    } else if (!res.ok) {
-      console.error("Custom Email API Failed:", data.error);
-      const actionCodeSettings = {
-        url: `${baseUrl}/verify-email`,
-        handleCodeInApp: false,
-      };
-      await sendEmailVerification(cred.user, actionCodeSettings);
-    }
+    await sendEmailVerification(cred.user);
   } catch (e: any) {
     console.error("Failed to send verification email:", e);
-    await signOut(auth);
-    throw e;
+    // Don't sign out or throw - let them go to the verification page to try again later
   }
 
   return cred.user;

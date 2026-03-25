@@ -132,31 +132,13 @@ function VerifyEmailContent() {
     
     setIsResending(true);
     try {
-      const idToken = await user.getIdToken();
-      const res = await fetch('/api/send-verification', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      const data = await res.json();
-      
-      // Fallback to Firebase default if API key missing
-      if (!res.ok && data.error?.includes('Resend API key missing')) {
-        const actionCodeSettings = {
-          url: typeof window !== 'undefined' ? window.location.origin + '/verify-email' : 'http://localhost:3000/verify-email',
-          handleCodeInApp: false,
-        };
-        await sendEmailVerification(user, actionCodeSettings);
-        toast.success('Verification email resent using default Firebase sender!');
-      } else if (!res.ok) {
-        throw new Error(data.error || 'Failed to resend custom email.');
-      } else {
-        toast.success('Premium verification email resent successfully! 🍫');
-      }
+      await sendEmailVerification(user);
+      toast.success('Verification email resent successfully! 🍫');
       setCooldown(60); // 60 seconds cooldown
     } catch (error: any) {
       // Handle too-many-requests or other errors
       if (error.code === 'auth/too-many-requests') {
-        toast.error('We have blocked all requests from this device due to unusual activity. Try again later.');
+        toast.error('Too many attempts. Please wait a few minutes.');
         setCooldown(120);
       } else {
         toast.error(error.message || 'Failed to resend verification email.');

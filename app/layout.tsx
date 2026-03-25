@@ -50,7 +50,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" className={`${outfit.variable} ${cinzel.variable} ${cormorant.variable}`}>
+    <html lang="en" className={`${outfit.variable} ${cinzel.variable} ${cormorant.variable}`} data-scroll-behavior="smooth">
       <body className="font-sans antialiased min-h-screen flex flex-col bg-[#0D0705] text-[#FFF3E0]" suppressHydrationWarning>
         <ServiceWorkerRegister />
         <ErrorBoundary>

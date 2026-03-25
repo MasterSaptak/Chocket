@@ -1217,26 +1217,38 @@ function AdminDashboardContent() {
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-2">
-                                {u.role === 'buyer' && (
-                                  <button
-                                    onClick={() => handlePromoteUser(u.uid, 'seller')}
-                                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1"
-                                    title="Promote to Seller"
-                                  >
-                                    <ArrowUpCircle className="w-3 h-3" /> Seller
-                                  </button>
-                                )}
+                                <select
+                                  value={u.role}
+                                  onChange={(e) => handlePromoteUser(u.uid, e.target.value as UserRole)}
+                                  // Manager can only toggle between buyer and seller, and only for buyers and sellers
+                                  disabled={
+                                    userData?.role !== 'primeadmin' && 
+                                    (u.role === 'manager' || u.role === 'primeadmin' || !['buyer', 'seller'].includes(u.role))
+                                  }
+                                  className="bg-[#1A0F0B] border border-white/10 rounded-lg px-2 py-1.5 text-xs font-medium focus:outline-none focus:border-[#D4AF37]/50 text-[#FFF3E0] disabled:opacity-50"
+                                >
+                                  <option value="buyer">Buyer</option>
+                                  <option value="seller">Seller</option>
+                                  {(userData?.role === 'primeadmin' || u.role === 'manager') && (
+                                    <option value="manager">Manager</option>
+                                  )}
+                                  {u.role === 'primeadmin' && (
+                                    <option value="primeadmin">Prime Admin</option>
+                                  )}
+                                </select>
                                 {u.status === 'active' ? (
                                   <button
                                     onClick={() => handleBanUser(u.uid)}
-                                    className="px-3 py-1.5 text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20 flex items-center gap-1"
+                                    disabled={userData?.role !== 'primeadmin' && (u.role === 'manager' || u.role === 'primeadmin' || !['buyer', 'seller'].includes(u.role))}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <Ban className="w-3 h-3" /> Ban
                                   </button>
                                 ) : (
                                   <button
                                     onClick={() => handleActivateUser(u.uid)}
-                                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1"
+                                    disabled={userData?.role !== 'primeadmin' && (u.role === 'manager' || u.role === 'primeadmin' || !['buyer', 'seller'].includes(u.role))}
+                                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors border border-emerald-500/20 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <CheckCircle className="w-3 h-3" /> Activate
                                   </button>

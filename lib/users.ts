@@ -10,6 +10,7 @@ import {
   orderBy,
   onSnapshot,
   Unsubscribe,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { ChocketUser, UserRole, UserStatus } from '@/types';
@@ -84,4 +85,10 @@ export async function activateUser(uid: string): Promise<void> {
 // ===== PROMOTE USER =====
 export async function promoteUser(uid: string, newRole: UserRole): Promise<void> {
   await updateUserRole(uid, newRole);
+}
+
+// ===== DELETE USER =====
+export async function deleteUserDocument(uid: string): Promise<void> {
+  const userRef = doc(db, USERS_COLLECTION, uid);
+  await deleteDoc(userRef);
 }
