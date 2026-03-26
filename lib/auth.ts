@@ -4,6 +4,8 @@ import {
   signOut,
   updateProfile,
   sendEmailVerification,
+  GoogleAuthProvider,
+  signInWithPopup,
   User as FirebaseUser,
 } from 'firebase/auth';
 import {
@@ -56,6 +58,30 @@ export async function loginWithEmail(
 ): Promise<FirebaseUser> {
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
+}
+
+// ===== LOGIN WITH GOOGLE =====
+export async function signInWithGoogle(): Promise<FirebaseUser> {
+  const provider = new GoogleAuthProvider();
+  // Force selection of account for Google login
+  provider.setCustomParameters({
+    prompt: 'select_account'
+  });
+  
+  const result = await signInWithPopup(auth, provider);
+  
+  // Check if user document exists, if not create it
+  const userRef = doc(db, 'users', result.user.uid);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) {
+    await createUserDocument(result.user, { 
+      name: result.user.displayName || 'Chocolate Lover', 
+      phone: '' 
+    });
+  }
+  
+  return result.user;
 }
 
 
