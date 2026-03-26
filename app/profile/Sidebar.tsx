@@ -100,8 +100,8 @@ export default function ProfileSidebar() {
   };
 
   return (
-    <div className="w-full md:w-80 flex-shrink-0">
-      <div className="glass-dark border border-[#3E2723]/50 rounded-3xl p-6 sticky top-28 shadow-2xl space-y-8 max-h-[calc(100vh-140px)] overflow-y-auto hide-scrollbar">
+    <div className="w-full lg:w-80 flex-shrink-0">
+      <div className="glass-dark border border-[#3E2723]/50 rounded-3xl p-4 md:p-6 lg:sticky lg:top-28 shadow-2xl space-y-6 md:space-y-8 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto hide-scrollbar">
         
         {/* User Snapshot Card */}
         <div className="relative group p-4 bg-[#1A0F0B] rounded-2xl border border-[#D4AF37]/10 overflow-hidden">
@@ -131,13 +131,14 @@ export default function ProfileSidebar() {
         </div>
 
         {/* Dynamic Navigation */}
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 md:block space-y-0 md:space-y-6">
           {menuGroups.map((group, gIdx) => (
-            <div key={group.title} className="space-y-2">
-              <h4 className="px-4 text-[10px] uppercase tracking-[0.2em] text-[#FFF3E0]/30 font-bold">
+            <div key={group.title} className="space-y-3">
+              <h4 className="px-4 text-[10px] uppercase tracking-[0.2em] text-[#FFF3E0]/30 font-bold flex items-center gap-2">
+                <span className="w-1 h-1 bg-[#D4AF37]/40 rounded-full" />
                 {group.title}
               </h4>
-              <div className="grid gap-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-1 gap-2 md:gap-1 px-1">
                 {group.items.map((item) => {
                   const isActive = activeSection === item.id;
                   const Icon = item.icon;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Shield, Crown, Users, ArrowUpCircle, Ban, CheckCircle,
-  Loader2, LogOut, Search, ChevronRight, AlertTriangle, UserCheck, Trash2
+  Loader2, LogOut, Search, ChevronRight, AlertTriangle, UserCheck, Trash2, User
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { RouteGuard } from '@/components/RouteGuard';
@@ -181,12 +181,27 @@ function SuperAdminContent() {
               <ChevronRight className="w-4 h-4 rotate-180" />
               Manager Dashboard
             </button>
+            
+            <div className="h-8 w-[1px] bg-white/10 hidden sm:block mx-2" />
+
+            <button
+              onClick={() => router.push('/profile')}
+              className="flex items-center gap-3 p-1.5 pr-4 bg-white/5 hover:bg-white/10 rounded-full border border-white/5 transition-all group"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center font-bold text-xs text-white shadow-lg group-hover:scale-110 transition-transform">
+                {(userData?.name || 'P').charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xs font-bold text-[#FFF3E0]/70 group-hover:text-white hidden sm:block">
+                View Profile
+              </span>
+            </button>
+
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors text-sm font-medium"
+              className="flex items-center justify-center w-10 h-10 text-red-400 hover:bg-red-400/10 rounded-full transition-colors"
+              title="Logout"
             >
               <LogOut className="w-4 h-4" />
-              Logout
             </button>
           </div>
         </div>

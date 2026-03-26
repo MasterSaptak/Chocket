@@ -61,6 +61,16 @@ export default function ProfilePage() {
         <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-[#3E2723]/[0.1] rounded-full blur-[180px] pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
+        {/* Mobile Mini-Nav (Sticky) */}
+        <div className="lg:hidden sticky top-0 z-50 bg-[#0D0705]/80 backdrop-blur-xl border-b border-[#3E2723]/50 mb-6 -mx-6 px-6 py-4">
+           <div className="flex items-center justify-between">
+              <h1 className="text-xl font-display font-bold text-[#FFF3E0]">Command Center</h1>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center font-bold text-[#1A0F0B] text-xs">
+                {user?.displayName?.charAt(0) || 'U'}
+              </div>
+           </div>
+        </div>
+
         <div className="container mx-auto px-6 relative z-10 max-w-7xl">
           <motion.div 
             initial={{ opacity: 0, y: 30, scale: 0.98 }}

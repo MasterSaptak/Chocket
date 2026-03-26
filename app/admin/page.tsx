@@ -589,9 +589,18 @@ function AdminDashboardContent() {
                 )}
               </AnimatePresence>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#1A0F0B] flex items-center justify-center font-bold shadow-lg border border-[#D4AF37]/50">
-              A
-            </div>
+            <button 
+              onClick={() => router.push('/profile')}
+              className="group flex items-center gap-3 p-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+              title="View Profile"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-[#1A0F0B] flex items-center justify-center font-bold shadow-lg border border-[#D4AF37]/50 group-hover:scale-110 transition-transform">
+                {userData?.name?.charAt(0).toUpperCase() || 'A'}
+              </div>
+              <span className="text-xs font-bold text-[#FFF3E0]/40 group-hover:text-white pr-3 hidden sm:block">
+                Profile
+              </span>
+            </button>
           </div>
         </header>
 
