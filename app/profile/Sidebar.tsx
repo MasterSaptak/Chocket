@@ -151,6 +151,13 @@ export default function ProfileSidebar() {
                           router.push(item.href);
                         } else {
                           setActiveSection(item.id);
+                          // Scroll to content on mobile
+                          if (window.innerWidth < 1024) {
+                            document.getElementById('command-center')?.scrollIntoView({ 
+                              behavior: 'smooth',
+                              block: 'start'
+                            });
+                          }
                         }
                       }}
                       className={`w-full group/btn flex items-center justify-between p-3 rounded-xl transition-all duration-300 border ${

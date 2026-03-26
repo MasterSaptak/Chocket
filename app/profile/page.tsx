@@ -82,7 +82,7 @@ export default function ProfilePage() {
             <ProfileSidebar />
 
             {/* Tactical Deployment Center */}
-            <div className="flex-1 min-w-0">
+            <div id="command-center" className="flex-1 min-w-0 scroll-mt-24">
                <CommandCenter />
             </div>
           </motion.div>
