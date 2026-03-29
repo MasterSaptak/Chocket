@@ -56,14 +56,17 @@ export default function DebugConsole() {
         timestamp: new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       };
 
-      setLogs(prev => {
-        const updated = [...prev.slice(-100), newLog];
-        try {
-          sessionStorage.setItem('chocket_debug_logs', JSON.stringify(updated));
-        } catch (e) {}
-        return updated;
+      // Use queueMicrotask to ensure we don't update state during a render phase
+      queueMicrotask(() => {
+        setLogs(prev => {
+          const updated = [...prev.slice(-100), newLog];
+          try {
+            sessionStorage.setItem('chocket_debug_logs', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
+        if (!isOpen) setHasNewLogs(true);
       });
-      if (!isOpen) setHasNewLogs(true);
     };
 
     console.log = (...args) => {

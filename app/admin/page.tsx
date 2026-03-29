@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
   TrendingUp, DollarSign, AlertCircle, Bell, Search, Menu, LogOut, Plus, Edit, Trash2, Eye, EyeOff, Loader2,
-  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText, ArrowLeft
+  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText, ArrowLeft, Crown
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
@@ -417,13 +417,25 @@ function AdminDashboardContent() {
             </button>
           </div>
           
-          <button 
-            onClick={() => router.push('/')}
-            className="w-full relative z-10 flex items-center gap-3 px-4 py-3 bg-[#0D0705]/60 hover:bg-[#D4AF37]/10 text-[#FFF3E0]/80 hover:text-[#D4AF37] border border-[#3E2723] rounded-xl transition-all group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-bold uppercase tracking-wider">Back to Store</span>
-          </button>
+          <div className="space-y-3 relative z-10">
+            {userData?.role === 'primeadmin' ? (
+              <button 
+                onClick={() => router.push('/superadmin/dashboard')}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl transition-all group"
+              >
+                <Crown className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold uppercase tracking-wider">Back to Prime</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => router.push('/')}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-[#0D0705]/60 hover:bg-[#D4AF37]/10 text-[#FFF3E0]/80 hover:text-[#D4AF37] border border-[#3E2723] rounded-xl transition-all group"
+              >
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                <span className="text-sm font-bold uppercase tracking-wider">Back to Store</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <nav className="px-4 space-y-2 mt-4 flex-1 overflow-y-auto hide-scrollbar relative z-10">

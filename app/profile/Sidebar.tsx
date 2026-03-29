@@ -6,7 +6,7 @@ import {
   User, MapPin, CreditCard, ShoppingBag, Heart, Eye, 
   Shield, Key, History, Bell, Globe, FileText, 
   RotateCcw, LogOut, ChevronRight, LayoutDashboard,
-  Crown, Star, Award
+  Crown, Star, Award, Store
 } from 'lucide-react';
 import { useProfile } from './ProfileContext';
 import { useAuth } from '@/components/AuthProvider';
@@ -14,10 +14,12 @@ import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { getRoleDisplayName, getRoleColor, getDashboardPath } from '@/lib/rbac';
+import Link from 'next/link';
 
 export default function ProfileSidebar() {
   const { activeSection, setActiveSection } = useProfile();
-  const { user, userData } = useAuth();
+  const { user, userData, role } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -104,30 +106,84 @@ export default function ProfileSidebar() {
       <div className="glass-dark border border-[#3E2723]/50 rounded-3xl p-4 md:p-6 lg:sticky lg:top-28 shadow-2xl space-y-6 md:space-y-8 lg:max-h-[calc(100vh-140px)] lg:overflow-y-auto hide-scrollbar">
         
         {/* User Snapshot Card */}
-        <div className="relative group p-4 bg-[#1A0F0B] rounded-2xl border border-[#D4AF37]/10 overflow-hidden">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-[#D4AF37]/5 rounded-bl-full pointer-events-none" />
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center font-bold text-[#1A0F0B] text-lg border-2 border-[#D4AF37]/20">
+        <div className="relative group p-6 bg-[#1A0F0B] rounded-[32px] border border-[#D4AF37]/10 overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-[#D4AF37]/5 rounded-bl-full pointer-events-none" />
+          <div className="flex items-center gap-5">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-[#1A0F0B] text-xl border-2 ${getRoleColor(role).border} bg-gradient-to-br ${getRoleColor(role).gradient} shadow-lg shrink-0`}>
               {(userData?.name || user?.displayName || 'U').charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-[#FFF3E0] font-bold text-sm truncate max-w-[140px]">
+            <div className="min-w-0 flex-1">
+              <p className="text-[#FFF3E0] font-bold text-base truncate pr-2">
                 {userData?.name || user?.displayName || 'Chocket Guest'}
               </p>
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-3 mt-1.5">
-                <div className="flex items-center gap-1.5">
-                  {getTierIcon(userData?.tier)}
-                  <span className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold">
-                    {userData?.tier || 'Bronze'} Member
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#D4AF37]/10 rounded-full border border-[#D4AF37]/20">
-                  <span className="text-[10px]">🍫</span>
-                  <span className="text-[10px] font-bold text-[#D4AF37]">{(userData?.choco_points || 0).toLocaleString()}</span>
-                </div>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className={`text-[8px] uppercase tracking-[0.1em] font-black px-2 py-0.5 rounded border shadow-sm ${getRoleColor(role).bg} ${getRoleColor(role).text} ${getRoleColor(role).border} shrink-0`}>
+                  {getRoleDisplayName(role)}
+                </span>
+                <span className="text-[10px] text-[#D4AF37] font-bold tracking-widest uppercase shrink-0">
+                  {userData?.tier || 'Bronze'} Tier
+                </span>
               </div>
             </div>
           </div>
+          
+          <div className="mt-6 flex items-center justify-between px-4 py-3 bg-[#D4AF37]/5 rounded-2xl border border-[#D4AF37]/10">
+             <div className="flex items-center gap-2">
+               <span className="text-sm">🍫</span>
+               <span className="text-sm font-bold text-[#D4AF37]">{(userData?.choco_points || 0).toLocaleString()}</span>
+             </div>
+             <div className="h-4 w-[1px] bg-[#D4AF37]/20" />
+             <div className="flex items-center gap-2">
+               {getTierIcon(userData?.tier)}
+               <span className="text-[10px] font-bold text-[#FFF3E0]/60 uppercase tracking-widest">Active</span>
+             </div>
+          </div>
+
+          {/* Quick Access Dashboard Buttons */}
+          {role && role !== 'buyer' && (
+            <div className="mt-5 flex flex-col gap-2.5">
+              {role === 'primeadmin' && (
+                <>
+                  <Link 
+                    href="/superadmin/dashboard"
+                    className="flex items-center justify-center gap-3 p-3.5 rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-purple-500/20 active:scale-[0.98] transition-all group/dash"
+                  >
+                    <Crown className="w-4 h-4" />
+                    Prime Admin
+                    <ChevronRight className="w-3.5 h-3.5 group-hover/dash:translate-x-1 transition-transform" />
+                  </Link>
+                  <Link 
+                    href="/admin"
+                    className="flex items-center justify-center gap-3 p-3.5 rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500/20 active:scale-[0.98] transition-all group/dash"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Manager Panel
+                    <ChevronRight className="w-3.5 h-3.5 group-hover/dash:translate-x-1 transition-transform" />
+                  </Link>
+                </>
+              )}
+              {role === 'manager' && (
+                <Link 
+                  href="/admin"
+                  className="flex items-center justify-center gap-3 p-3.5 rounded-2xl border border-blue-500/20 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-blue-500/20 active:scale-[0.98] transition-all group/dash"
+                >
+                  <Shield className="w-4 h-4" />
+                  Manager Panel
+                  <ChevronRight className="w-3.5 h-3.5 group-hover/dash:translate-x-1 transition-transform" />
+                </Link>
+              )}
+              {role === 'seller' && (
+                <Link 
+                  href="/seller/dashboard"
+                  className="flex items-center justify-center gap-3 p-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-emerald-500/20 active:scale-[0.98] transition-all group/dash"
+                >
+                  <Store className="w-4 h-4" />
+                  Seller Dashboard
+                  <ChevronRight className="w-3.5 h-3.5 group-hover/dash:translate-x-1 transition-transform" />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Dynamic Navigation */}

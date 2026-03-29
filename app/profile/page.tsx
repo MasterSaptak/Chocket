@@ -8,9 +8,11 @@ import CommandCenter from './CommandCenter';
 import { Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getRoleDisplayName, getRoleColor, getDashboardPath } from '@/lib/rbac';
+import { Shield, Crown, Store } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, userData, role, loading } = useAuth();
   const router = useRouter();
 
   if (loading) {
@@ -62,11 +64,25 @@ export default function ProfilePage() {
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
         {/* Mobile Mini-Nav (Sticky) */}
-        <div className="lg:hidden sticky top-0 z-50 bg-[#0D0705]/80 backdrop-blur-xl border-b border-[#3E2723]/50 mb-6 -mx-6 px-6 py-4">
+        <div className="lg:hidden sticky top-0 z-50 bg-[#0D0705]/80 backdrop-blur-xl border-b border-[#3E2723]/50 mb-6 px-6 py-4">
            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-display font-bold text-[#FFF3E0]">Command Center</h1>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center font-bold text-[#1A0F0B] text-xs">
-                {user?.displayName?.charAt(0) || 'U'}
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[#1A0F0B] text-sm border-2 ${getRoleColor(role).border} bg-gradient-to-br ${getRoleColor(role).gradient}`}>
+                  {user?.displayName?.charAt(0) || 'U'}
+                </div>
+                <div>
+                  <h1 className="text-sm font-display font-bold text-[#FFF3E0] leading-none">Command Center</h1>
+                  <span className={`text-[9px] uppercase tracking-widest font-bold ${getRoleColor(role).text}`}>
+                    {getRoleDisplayName(role)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <span className={`text-[9px] uppercase tracking-widest font-black px-3 py-1.5 rounded-lg border shadow-sm ${getRoleColor(role).bg} ${getRoleColor(role).text} ${getRoleColor(role).border}`}>
+                  {getRoleDisplayName(role)}
+                </span>
+                {/* Removed redundant dashboard button from here as it appears in the card below */}
               </div>
            </div>
         </div>
