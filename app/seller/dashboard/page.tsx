@@ -467,19 +467,19 @@ function SellerDashboardContent() {
             
             <div className="h-6 w-px bg-white/10"></div>
             
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#D4AF37] to-[#B8860B] rounded-xl flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
+            <Link href="/" className="flex items-center gap-3 group/logo cursor-pointer">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#D4AF37] to-[#B8860B] rounded-xl flex items-center justify-center shadow-lg shadow-[#D4AF37]/20 group-hover/logo:scale-110 transition-transform">
                 <Store className="w-5 h-5 text-[#1A0F0B]" />
               </div>
               <div>
-                <h1 className="text-lg font-display font-bold text-[#FFF3E0] leading-tight">
+                <h1 className="text-lg font-display font-bold text-[#FFF3E0] leading-tight group-hover/logo:text-[#D4AF37] transition-colors">
                   Seller <span className="text-[#D4AF37]">Hub</span>
                 </h1>
                 <p className="text-[10px] text-[#D4AF37] uppercase tracking-wider font-semibold">
                   Partner Portal
                 </p>
               </div>
-            </div>
+            </Link>
           </div>
 
           <div className="flex items-center gap-4">

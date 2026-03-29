@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Shield, Crown, Users, ArrowUpCircle, Ban, CheckCircle,
@@ -160,19 +161,19 @@ function SuperAdminContent() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#1A0F0B]/90 backdrop-blur-xl border-b border-purple-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-4 group cursor-pointer">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Crown className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-display font-bold text-[#FFF3E0]">
+              <h1 className="text-xl font-display font-bold text-[#FFF3E0] group-hover:text-purple-400 transition-colors">
                 Prime <span className="text-purple-400">Admin</span>
               </h1>
               <p className="text-xs text-[#FFF3E0]/40">
                 Welcome, {userData?.name || 'Prime Admin'}
               </p>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/admin')}

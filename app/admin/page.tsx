@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Product } from '@/components/ProductCard';
 import { getAllProducts, addProduct, updateProduct, deleteProduct, deleteProducts, subscribeToProducts } from '@/lib/products';
 import { ProductModal } from '@/components/ProductModal';
@@ -406,10 +407,12 @@ function AdminDashboardContent() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           <div className="flex items-center justify-between mb-6 relative z-10">
             <div>
-              <h1 className="text-2xl font-display font-bold text-[#FFF3E0] tracking-tight flex items-center gap-2">
+            <Link href="/" className="group cursor-pointer">
+              <h1 className="text-2xl font-display font-bold text-[#FFF3E0] tracking-tight flex items-center gap-2 group-hover:text-[#D4AF37] transition-colors">
                 <Shield className="w-6 h-6 text-[#D4AF37]" />
                 Chocket<span className="text-[#D4AF37]">Admin</span>
               </h1>
+            </Link>
               <p className="text-[10px] text-[#D4AF37] uppercase tracking-wider font-semibold mt-1">Prime Command Center</p>
             </div>
             <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-[#FFF3E0]/60 hover:text-[#D4AF37] bg-white/5 rounded-lg">
@@ -419,13 +422,22 @@ function AdminDashboardContent() {
           
           <div className="space-y-3 relative z-10">
             {userData?.role === 'primeadmin' ? (
-              <button 
-                onClick={() => router.push('/superadmin/dashboard')}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl transition-all group"
-              >
-                <Crown className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-bold uppercase tracking-wider">Back to Prime</span>
-              </button>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => router.push('/superadmin/dashboard')}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl transition-all group"
+                >
+                  <Crown className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Back to Prime</span>
+                </button>
+                <button 
+                  onClick={() => router.push('/')}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-[#0D0705]/60 hover:bg-[#D4AF37]/10 text-[#FFF3E0]/80 hover:text-[#D4AF37] border border-[#3E2723] rounded-xl transition-all group"
+                >
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Back to Store</span>
+                </button>
+              </div>
             ) : (
               <button 
                 onClick={() => router.push('/')}
