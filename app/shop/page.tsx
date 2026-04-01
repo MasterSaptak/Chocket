@@ -2,6 +2,9 @@ import { Metadata } from 'next';
 import { getAllProducts, seedProductsIfEmpty } from '@/lib/products';
 import ShopPageClient from './ShopPageClient';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Shop Premium Artisan Chocolates | Chocket',
   description: 'Explore our curated collection of luxury chocolates from world-renowned artisans. Belgian truffles, Swiss bars, and artisan hampers delivered worldwide.',

@@ -9,6 +9,11 @@ import { Product } from '@/lib/products';
 import { useCart } from '@/components/CartProvider';
 import { toast } from 'sonner';
 import { SmartImage } from '@/components/SmartImage';
+import { useCurrency } from '@/hooks/useCurrency';
+import { normalizeProduct } from '@/lib/product-adapter';
+import { CURRENCY_SYMBOLS } from '@/lib/currency';
+import { formatApproxSecondary, getListAndCustomerInCurrency } from '@/lib/pricing-engine';
+import type { Currency } from '@/types';
 
 interface ProductPageClientProps {
   product: Product;
@@ -19,10 +24,22 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const { addItem } = useCart();
+  const { currentCurrency } = useCurrency();
+  const normalized = normalizeProduct(product);
+  const alt = getListAndCustomerInCurrency(normalized, currentCurrency);
+  const displayPrice = alt?.customer ?? product.price;
+  const displayList = alt?.list ?? product.originalPrice;
+  const displayCurr: Currency = alt?.currency ?? 'INR';
+  const approxSecondary = formatApproxSecondary(
+    normalized,
+    displayCurr,
+    c => CURRENCY_SYMBOLS[c]
+  );
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-    : 0;
+  const discount =
+    displayList && displayList > displayPrice
+      ? Math.round(((displayList - displayPrice) / displayList) * 100)
+      : 0;
 
   const images = product.images && product.images.length > 0 
     ? product.images 
@@ -144,10 +161,21 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
                 <span className="text-sm text-muted-foreground">({product.reviews} reviews)</span>
               </div>
 
-              <div className="flex items-end gap-4 mb-8 pb-8 border-b border-border">
-                <span className="text-4xl font-bold text-primary">₹{product.price}</span>
-                {product.originalPrice && (
-                  <span className="text-xl text-muted-foreground line-through mb-1">₹{product.originalPrice}</span>
+              <div className="mb-8 flex flex-col gap-1 pb-8 border-b border-border">
+                <div className="flex items-end gap-4">
+                  <span className="text-4xl font-bold text-primary">
+                    {CURRENCY_SYMBOLS[displayCurr]}
+                    {displayPrice}
+                  </span>
+                  {displayList != null && displayList > displayPrice && (
+                    <span className="mb-1 text-xl text-muted-foreground line-through">
+                      {CURRENCY_SYMBOLS[displayCurr]}
+                      {displayList}
+                    </span>
+                  )}
+                </div>
+                {approxSecondary && (
+                  <span className="text-sm text-muted-foreground">{approxSecondary}</span>
                 )}
               </div>
 

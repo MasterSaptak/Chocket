@@ -57,6 +57,7 @@ function prepareProductPayload(product: Omit<Product, 'id'> | Partial<Product>):
       originCountry: 'India',
       procurementCountry: 'India',
     },
+    inrPricing: product.inrPricing,
     updatedAt: product.updatedAt || new Date().toISOString(),
     createdAt: product.createdAt || new Date().toISOString(),
   });

@@ -90,6 +90,60 @@ export interface SupplyChain {
   certifications?: string[];
 }
 
+// ===== INR-BASED PRICING ENGINE (optional on Product) =====
+/** Immutable origin facts once captured; admin UI must not overwrite after first save. */
+export interface ProductOriginTruth {
+  originCountry: string;
+  originCurrency: Currency;
+  originMrp: number;
+  capturedAt: string;
+}
+
+/** Snapshot of rates used when this product was priced (manual override or API later). */
+export interface ProductExchangeSnapshot {
+  /** 1 USD = X INR */
+  usdToInr: number;
+  /** 1 EUR = X INR */
+  eurToInr: number;
+  /** 1 INR = X BDT */
+  inrToBdt: number;
+  lastUpdated?: string;
+  source?: 'manual' | 'api' | 'default';
+}
+
+/** Landed cost components — all in INR. */
+export interface ProductLandedCostInr {
+  purchaseCostInr: number;
+  shippingInr: number;
+  taxInr: number;
+  miscInr: number;
+}
+
+/** B2B / B2C anchors in INR; optional list (compare-at) and discount on B2C. */
+export interface ProductPricingInr {
+  b2bPriceInr: number;
+  b2cPriceInr: number;
+  /** Compare-at / MRP reference in INR (e.g. converted origin MRP), optional */
+  listPriceInr?: number;
+  discount?: ProductDiscount;
+}
+
+/** Central INR pricing bundle: origin truth + snapshot + costs + derived metrics. */
+export interface ProductInrPricing {
+  originTruth: ProductOriginTruth;
+  exchangeSnapshot: ProductExchangeSnapshot;
+  landedCost: ProductLandedCostInr;
+  tier: ProductPricingInr;
+  /** origin_mrp converted to INR using exchangeSnapshot */
+  convertedMrpInr: number;
+  /** Sum of landed cost components */
+  landedTotalInr: number;
+  /** b2c (after discount) − landed total */
+  profitInr: number;
+  /** (profit / b2c effective) × 100 */
+  marginPercent: number;
+}
+
 // ===== PRODUCT =====
 export interface Product {
   id: string;
@@ -114,6 +168,8 @@ export interface Product {
   supplyChain: SupplyChain;
   updatedAt: string;
   createdAt: string;
+  /** When set, storefront and admin use INR as source of truth and sync markets from it. */
+  inrPricing?: ProductInrPricing;
 }
 
 export interface ProductIntakeDraft {

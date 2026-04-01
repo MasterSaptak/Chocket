@@ -6,6 +6,13 @@ import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { SmartImage } from './SmartImage';
 import { CURRENCY_SYMBOLS } from '@/lib/currency';
+import {
+  buildProductInrPricing,
+  convertFromInr,
+  convertToInr,
+  effectiveB2cInr,
+  getDefaultExchangeSnapshot,
+} from '@/lib/pricing-engine';
 import { getProductDisplayPricing, normalizeProduct } from '@/lib/product-adapter';
 import type { Currency, Product, ProductMarketPricing } from '@/types';
 
@@ -57,10 +64,21 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
   const [isBestSeller, setIsBestSeller] = useState(false);
   const [originCountry, setOriginCountry] = useState('India');
   const [procurementCountry, setProcurementCountry] = useState('India');
-  const [procurementCost, setProcurementCost] = useState(0);
-  const [procurementCurrency, setProcurementCurrency] = useState<Currency>('INR');
-  const [wholesalePrice, setWholesalePrice] = useState(0);
-  const [wholesaleCurrency, setWholesaleCurrency] = useState<Currency>('INR');
+  const [originMrp, setOriginMrp] = useState(0);
+  const [originCurrency, setOriginCurrency] = useState<Currency>('INR');
+  const [usdToInr, setUsdToInr] = useState(83.5);
+  const [eurToInr, setEurToInr] = useState(90.8);
+  const [inrToBdt, setInrToBdt] = useState(1.44);
+  const [purchaseCostInr, setPurchaseCostInr] = useState(0);
+  const [shippingInr, setShippingInr] = useState(0);
+  const [taxInr, setTaxInr] = useState(0);
+  const [miscInr, setMiscInr] = useState(0);
+  const [b2bPriceInr, setB2bPriceInr] = useState(0);
+  const [b2cPriceInr, setB2cPriceInr] = useState(0);
+  const [listPriceInr, setListPriceInr] = useState(0);
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [discountType, setDiscountType] = useState<'percentage' | 'flat'>('percentage');
+  const [discountValue, setDiscountValue] = useState(0);
   const [markets, setMarkets] = useState<MarketDraft[]>([createMarket('INR', 0)]);
   const [defaultMarketId, setDefaultMarketId] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -72,7 +90,7 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
 
     if (product) {
       const normalized = normalizeProduct(product);
-      const pricing = getProductDisplayPricing(normalized);
+      const snap = getDefaultExchangeSnapshot();
       setName(normalized.name);
       setBrand(normalized.brand || 'Chocket');
       setDescription(normalized.description || '');
@@ -82,14 +100,56 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
       setIsBestSeller(Boolean(normalized.isBestSeller));
       setOriginCountry(normalized.supplyChain.originCountry || 'India');
       setProcurementCountry(normalized.supplyChain.procurementCountry || normalized.supplyChain.originCountry || 'India');
-      setProcurementCost(normalized.pricing.buying.amount || 0);
-      setProcurementCurrency(normalized.pricing.buying.currency || 'INR');
-      setWholesalePrice(normalized.wholesale.amount || pricing.selling.amount || 0);
-      setWholesaleCurrency(normalized.wholesale.currency || pricing.selling.currency || 'INR');
       setMarkets(normalized.markets.length ? normalized.markets : [createMarket('INR', 0)]);
       setDefaultMarketId(normalized.defaultMarketId || normalized.markets[0]?.id || '');
       setImages(normalized.images || []);
       setNewImageUrl('');
+
+      if (normalized.inrPricing) {
+        const b = normalized.inrPricing;
+        setOriginMrp(b.originTruth.originMrp);
+        setOriginCurrency(b.originTruth.originCurrency);
+        setUsdToInr(b.exchangeSnapshot.usdToInr);
+        setEurToInr(b.exchangeSnapshot.eurToInr);
+        setInrToBdt(b.exchangeSnapshot.inrToBdt);
+        setPurchaseCostInr(b.landedCost.purchaseCostInr);
+        setShippingInr(b.landedCost.shippingInr);
+        setTaxInr(b.landedCost.taxInr);
+        setMiscInr(b.landedCost.miscInr);
+        setB2bPriceInr(b.tier.b2bPriceInr);
+        setB2cPriceInr(b.tier.b2cPriceInr);
+        setListPriceInr(b.tier.listPriceInr ?? b.convertedMrpInr);
+        const d = b.tier.discount;
+        setHasDiscount(Boolean(d?.isActive));
+        setDiscountType(d?.type ?? 'percentage');
+        setDiscountValue(d?.value ?? 0);
+        return;
+      }
+
+      const m = normalized.markets[0];
+      const cur = m?.currency || 'INR';
+      const ex = snap;
+      setOriginMrp(m?.listPrice ?? normalized.pricing.base?.amount ?? 0);
+      setOriginCurrency(normalized.pricing.base?.currency ?? cur);
+      setUsdToInr(ex.usdToInr);
+      setEurToInr(ex.eurToInr);
+      setInrToBdt(ex.inrToBdt);
+      setPurchaseCostInr(
+        convertToInr(normalized.pricing.buying.amount, normalized.pricing.buying.currency, ex)
+      );
+      setShippingInr(0);
+      setTaxInr(0);
+      setMiscInr(0);
+      setB2bPriceInr(
+        convertToInr(normalized.wholesale.amount, normalized.wholesale.currency, ex)
+      );
+      setB2cPriceInr(
+        convertToInr(m?.customerPrice ?? normalized.pricing.selling.amount, cur, ex)
+      );
+      setListPriceInr(convertToInr(m?.listPrice ?? normalized.pricing.base?.amount ?? 0, cur, ex));
+      setHasDiscount(false);
+      setDiscountType('percentage');
+      setDiscountValue(0);
       return;
     }
 
@@ -102,10 +162,22 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
     setIsBestSeller(false);
     setOriginCountry('India');
     setProcurementCountry('India');
-    setProcurementCost(0);
-    setProcurementCurrency('INR');
-    setWholesalePrice(0);
-    setWholesaleCurrency('INR');
+    const def = getDefaultExchangeSnapshot();
+    setOriginMrp(0);
+    setOriginCurrency('INR');
+    setUsdToInr(def.usdToInr);
+    setEurToInr(def.eurToInr);
+    setInrToBdt(def.inrToBdt);
+    setPurchaseCostInr(0);
+    setShippingInr(0);
+    setTaxInr(0);
+    setMiscInr(0);
+    setB2bPriceInr(0);
+    setB2cPriceInr(0);
+    setListPriceInr(0);
+    setHasDiscount(false);
+    setDiscountType('percentage');
+    setDiscountValue(0);
     const initialMarket = createMarket('INR', 0);
     setMarkets([initialMarket]);
     setDefaultMarketId(initialMarket.id);
@@ -113,10 +185,120 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
     setNewImageUrl('');
   }, [product, isOpen]);
 
-  const previewMarket = useMemo(
-    () => markets.find(market => market.id === defaultMarketId) ?? markets[0],
-    [markets, defaultMarketId]
-  );
+  const originTruthLocked = Boolean(product?.inrPricing?.originTruth);
+
+  const engineBundlePreview = useMemo(() => {
+    if (b2cPriceInr <= 0 || b2bPriceInr <= 0) return null;
+    try {
+      return buildProductInrPricing({
+        originTruth: {
+          originCountry,
+          originCurrency,
+          originMrp,
+          capturedAt: product?.inrPricing?.originTruth.capturedAt ?? new Date().toISOString(),
+        },
+        exchangeSnapshot: {
+          usdToInr,
+          eurToInr,
+          inrToBdt,
+          lastUpdated: new Date().toISOString(),
+          source: 'manual',
+        },
+        landedCost: {
+          purchaseCostInr,
+          shippingInr,
+          taxInr,
+          miscInr,
+        },
+        tier: {
+          b2bPriceInr,
+          b2cPriceInr,
+          listPriceInr: listPriceInr > 0 ? listPriceInr : undefined,
+          discount: hasDiscount
+            ? { type: discountType, value: discountValue, isActive: true }
+            : undefined,
+        },
+      });
+    } catch {
+      return null;
+    }
+  }, [
+    originCountry,
+    originCurrency,
+    originMrp,
+    product?.inrPricing?.originTruth.capturedAt,
+    usdToInr,
+    eurToInr,
+    inrToBdt,
+    purchaseCostInr,
+    shippingInr,
+    taxInr,
+    miscInr,
+    b2bPriceInr,
+    b2cPriceInr,
+    listPriceInr,
+    hasDiscount,
+    discountType,
+    discountValue,
+  ]);
+
+  const syncedPreviewProduct = useMemo(() => {
+    if (!engineBundlePreview) return null;
+    return normalizeProduct({
+      id: product?.id || 'preview',
+      sellerId: product?.sellerId || '',
+      name: name || 'Preview',
+      brand: brand.trim() || 'Chocket',
+      description: description || '',
+      category,
+      stock,
+      rating: product?.rating ?? 0,
+      reviews: product?.reviews ?? 0,
+      isNew,
+      isBestSeller,
+      status: 'live',
+      approvedBy: product?.approvedBy || '',
+      bypass: product?.bypass,
+      images: images.length ? images : product?.images?.length ? product.images : [],
+      pricing: {
+        buying: { amount: 0, currency: 'INR' },
+        base: { amount: 0, currency: 'INR' },
+        selling: { amount: 0, currency: 'INR' },
+      },
+      wholesale: { amount: 0, currency: 'INR' },
+      markets,
+      defaultMarketId: defaultMarketId || markets[0]?.id || '',
+      supplyChain: { originCountry, procurementCountry },
+      createdAt: product?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      inrPricing: engineBundlePreview,
+    } as Product);
+  }, [
+    engineBundlePreview,
+    markets,
+    defaultMarketId,
+    product,
+    name,
+    brand,
+    description,
+    category,
+    stock,
+    images,
+    originCountry,
+    procurementCountry,
+    isNew,
+    isBestSeller,
+  ]);
+
+  const previewMarket = useMemo(() => {
+    if (syncedPreviewProduct?.markets?.length) {
+      return (
+        syncedPreviewProduct.markets.find(m => m.id === defaultMarketId) ??
+        syncedPreviewProduct.markets[0]
+      );
+    }
+    return markets.find(market => market.id === defaultMarketId) ?? markets[0];
+  }, [syncedPreviewProduct, markets, defaultMarketId]);
 
   const addImageUrl = () => {
     const trimmedUrl = newImageUrl.trim();
@@ -204,31 +386,65 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
       return;
     }
 
-    if (procurementCost <= 0 || wholesalePrice <= 0) {
-      toast.error('Procurement and wholesale prices must be greater than 0');
+    if (b2bPriceInr <= 0 || b2cPriceInr <= 0) {
+      toast.error('B2B and B2C prices in INR must be greater than 0');
       return;
     }
 
-    if (markets.some(market => !market.marketName.trim() || market.listPrice <= 0 || market.sellingPrice <= 0 || market.customerPrice <= 0)) {
-      toast.error('Each market needs a name and valid prices');
+    if (markets.some(market => !market.marketName.trim())) {
+      toast.error('Each market needs a name');
       return;
     }
 
     setIsSaving(true);
 
     try {
+      const originTruthFinal = product?.inrPricing?.originTruth ?? {
+        originCountry,
+        originCurrency,
+        originMrp,
+        capturedAt: new Date().toISOString(),
+      };
+
+      const exchangeSnapshot = {
+        usdToInr,
+        eurToInr,
+        inrToBdt,
+        lastUpdated: new Date().toISOString(),
+        source: 'manual' as const,
+      };
+
+      const landedCost = {
+        purchaseCostInr,
+        shippingInr,
+        taxInr,
+        miscInr,
+      };
+
+      const tier = {
+        b2bPriceInr,
+        b2cPriceInr,
+        listPriceInr: listPriceInr > 0 ? listPriceInr : undefined,
+        discount: hasDiscount
+          ? { type: discountType, value: discountValue, isActive: true as const }
+          : undefined,
+      };
+
+      const inrPricing = buildProductInrPricing({
+        originTruth: originTruthFinal,
+        exchangeSnapshot,
+        landedCost,
+        tier,
+      });
+
       const normalizedMarkets = markets.map(market => ({
         ...market,
         marketCode: market.marketCode.trim() || market.currency,
         marketName: market.marketName.trim(),
-        discount: market.listPrice > market.customerPrice ? {
-          type: 'flat' as const,
-          value: Math.round((market.listPrice - market.customerPrice) * 100) / 100,
-          isActive: true,
-        } : undefined,
       }));
 
-      const selectedDefaultMarket = normalizedMarkets.find(market => market.id === defaultMarketId) ?? normalizedMarkets[0];
+      const selectedDefaultMarket =
+        normalizedMarkets.find(market => market.id === defaultMarketId) ?? normalizedMarkets[0];
 
       const productData: Omit<Product, 'id'> = {
         sellerId: product?.sellerId || '',
@@ -236,11 +452,11 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
         brand: brand.trim() || 'Chocket',
         description: description.trim(),
         pricing: {
-          buying: { amount: procurementCost, currency: procurementCurrency },
-          base: { amount: selectedDefaultMarket.listPrice, currency: selectedDefaultMarket.currency },
-          selling: { amount: selectedDefaultMarket.customerPrice, currency: selectedDefaultMarket.currency },
+          buying: { amount: 0, currency: 'INR' },
+          base: { amount: 0, currency: 'INR' },
+          selling: { amount: 0, currency: 'INR' },
         },
-        wholesale: { amount: wholesalePrice, currency: wholesaleCurrency },
+        wholesale: { amount: 0, currency: 'INR' },
         markets: normalizedMarkets,
         defaultMarketId: selectedDefaultMarket.id,
         images: finalImages,
@@ -259,9 +475,18 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
         },
         createdAt: product?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        inrPricing,
       };
 
-      await onSave(productData);
+      const synced = normalizeProduct({ id: product?.id || 'new', ...productData } as Product);
+
+      await onSave({
+        ...productData,
+        pricing: synced.pricing,
+        wholesale: synced.wholesale,
+        markets: synced.markets,
+        defaultMarketId: synced.defaultMarketId,
+      });
       onClose();
     } catch (error) {
       console.error('Error saving enhanced product:', error);
@@ -295,7 +520,7 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
                 {product ? 'Edit Product' : 'Add Product'}
               </h2>
               <p className="mt-1 text-sm text-[#FFF3E0]/60">
-                One product form with procurement, wholesale, and per-market customer pricing.
+                INR-based pricing engine: origin MRP is preserved; storefront prices convert per market currency.
               </p>
             </div>
             <button
@@ -404,58 +629,218 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
                 </div>
               </section>
 
-              <section className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#D4AF37]">Internal Pricing</h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid grid-cols-[1fr_120px] gap-3">
-                    <label className="space-y-2">
-                      <span className="text-sm font-medium text-[#FFF3E0]/80">Procurement Cost</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={procurementCost}
-                        onChange={(e) => setProcurementCost(Number(e.target.value))}
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
-                      />
-                    </label>
-                    <label className="space-y-2">
-                      <span className="text-sm font-medium text-[#FFF3E0]/80">Currency</span>
-                      <select
-                        value={procurementCurrency}
-                        onChange={(e) => setProcurementCurrency(e.target.value as Currency)}
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
-                      >
-                        {CURRENCIES.map(currency => (
-                          <option key={currency} value={currency}>{currency}</option>
-                        ))}
-                      </select>
-                    </label>
+              <section className="space-y-4 rounded-2xl border border-[#D4AF37]/20 bg-black/20 p-5">
+                <h3 className="text-lg font-semibold text-[#D4AF37]">1. Origin info (source of truth)</h3>
+                <p className="text-xs text-[#FFF3E0]/50">
+                  After the first save, origin MRP and currency are locked and never overwritten from this form.
+                </p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">Origin MRP</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={originMrp}
+                      onChange={(e) => setOriginMrp(Number(e.target.value))}
+                      disabled={originTruthLocked}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">Origin currency</span>
+                    <select
+                      value={originCurrency}
+                      onChange={(e) => setOriginCurrency(e.target.value as Currency)}
+                      disabled={originTruthLocked}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {CURRENCIES.map(currency => (
+                        <option key={currency} value={currency}>{currency}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="rounded-xl border border-white/10 bg-[#D4AF37]/5 p-4">
+                    <div className="text-xs uppercase tracking-wider text-[#FFF3E0]/50">Converted MRP (INR)</div>
+                    <div className="mt-1 text-2xl font-bold text-[#D4AF37]">
+                      {engineBundlePreview ? `₹${engineBundlePreview.convertedMrpInr}` : '—'}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-[1fr_120px] gap-3">
-                    <label className="space-y-2">
-                      <span className="text-sm font-medium text-[#FFF3E0]/80">Wholesale Price</span>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-2xl border border-white/10 bg-black/15 p-5">
+                <h3 className="text-lg font-semibold text-[#D4AF37]">2. Rate snapshot (per product)</h3>
+                <p className="text-xs text-[#FFF3E0]/50">Manual overrides; align with Currency &amp; Rates or future API.</p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">1 USD = INR</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={usdToInr}
+                      onChange={(e) => setUsdToInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">1 EUR = INR</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={eurToInr}
+                      onChange={(e) => setEurToInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">1 INR = BDT</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.0001"
+                      value={inrToBdt}
+                      onChange={(e) => setInrToBdt(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-2xl border border-white/10 bg-black/15 p-5">
+                <h3 className="text-lg font-semibold text-[#D4AF37]">3. Landed cost (all INR)</h3>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">Purchase cost (INR)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={purchaseCostInr}
+                      onChange={(e) => setPurchaseCostInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">Shipping (INR)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={shippingInr}
+                      onChange={(e) => setShippingInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">Tax (INR)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={taxInr}
+                      onChange={(e) => setTaxInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">Misc (INR)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={miscInr}
+                      onChange={(e) => setMiscInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                </div>
+                <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 px-4 py-3 text-sm text-[#FFF3E0]/80">
+                  Landed total:{' '}
+                  <span className="font-bold text-[#D4AF37]">
+                    {engineBundlePreview ? `₹${engineBundlePreview.landedTotalInr}` : '—'}
+                  </span>
+                </div>
+              </section>
+
+              <section className="space-y-4 rounded-2xl border border-white/10 bg-black/15 p-5">
+                <h3 className="text-lg font-semibold text-[#D4AF37]">4. Pricing engine (INR)</h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">B2B / dealer (INR)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={b2bPriceInr}
+                      onChange={(e) => setB2bPriceInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">B2C list (INR, compare-at)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={listPriceInr}
+                      onChange={(e) => setListPriceInr(Number(e.target.value))}
+                      placeholder="Auto: converted MRP"
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#FFF3E0]/80">B2C sell (INR)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={b2cPriceInr}
+                      onChange={(e) => setB2cPriceInr(Number(e.target.value))}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-6 rounded-xl border border-white/10 bg-black/20 p-4">
+                  <label className="flex items-center gap-2 text-sm text-[#FFF3E0]/80">
+                    <input type="checkbox" checked={hasDiscount} onChange={(e) => setHasDiscount(e.target.checked)} />
+                    Discount on B2C (INR)
+                  </label>
+                  {hasDiscount && (
+                    <>
+                      <select
+                        value={discountType}
+                        onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'flat')}
+                        className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[#FFF3E0]"
+                      >
+                        <option value="percentage">Percent</option>
+                        <option value="flat">Flat (INR)</option>
+                      </select>
                       <input
                         type="number"
                         min={0}
                         step="0.01"
-                        value={wholesalePrice}
-                        onChange={(e) => setWholesalePrice(Number(e.target.value))}
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
+                        value={discountValue}
+                        onChange={(e) => setDiscountValue(Number(e.target.value))}
+                        className="w-28 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[#FFF3E0]"
                       />
-                    </label>
-                    <label className="space-y-2">
-                      <span className="text-sm font-medium text-[#FFF3E0]/80">Currency</span>
-                      <select
-                        value={wholesaleCurrency}
-                        onChange={(e) => setWholesaleCurrency(e.target.value as Currency)}
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
-                      >
-                        {CURRENCIES.map(currency => (
-                          <option key={currency} value={currency}>{currency}</option>
-                        ))}
-                      </select>
-                    </label>
+                    </>
+                  )}
+                </div>
+                <div className="grid gap-2 text-sm text-[#FFF3E0]/70 md:grid-cols-2">
+                  <div>
+                    Profit (after discount, vs landed):{' '}
+                    <span className="font-semibold text-[#D4AF37]">
+                      {engineBundlePreview ? `₹${engineBundlePreview.profitInr}` : '—'}
+                    </span>
+                  </div>
+                  <div>
+                    Margin %:{' '}
+                    <span className="font-semibold text-[#D4AF37]">
+                      {engineBundlePreview ? `${engineBundlePreview.marginPercent}%` : '—'}
+                    </span>
                   </div>
                 </div>
               </section>
@@ -463,8 +848,10 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-[#D4AF37]">Market Pricing</h3>
-                    <p className="text-sm text-[#FFF3E0]/50">Set list, selling, and final customer prices manually for each market.</p>
+                    <h3 className="text-lg font-semibold text-[#D4AF37]">5. Markets (currency per region)</h3>
+                    <p className="text-sm text-[#FFF3E0]/50">
+                      List / B2B / customer amounts below are computed from INR using the rate snapshot.
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -478,9 +865,11 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
 
                 <div className="space-y-4">
                   {markets.map((market, index) => {
-                    const discount = market.listPrice > 0 && market.customerPrice < market.listPrice
-                      ? Math.round(((market.listPrice - market.customerPrice) / market.listPrice) * 100)
-                      : 0;
+                    const synced = syncedPreviewProduct?.markets.find(m => m.id === market.id);
+                    const discount =
+                      synced && synced.listPrice > 0 && synced.customerPrice < synced.listPrice
+                        ? Math.round(((synced.listPrice - synced.customerPrice) / synced.listPrice) * 100)
+                        : 0;
 
                     return (
                       <div key={market.id} className="rounded-2xl border border-white/10 bg-black/20 p-5">
@@ -546,39 +935,30 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
                         </div>
 
                         <div className="mt-4 grid gap-4 md:grid-cols-3">
-                          <label className="space-y-2">
-                            <span className="text-sm font-medium text-[#FFF3E0]/80">List Price</span>
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={market.listPrice}
-                              onChange={(e) => updateMarket(market.id, 'listPrice', Number(e.target.value))}
-                              className="w-full rounded-xl border border-white/10 bg-[#1A0F0B] px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
-                            />
-                          </label>
-                          <label className="space-y-2">
-                            <span className="text-sm font-medium text-[#FFF3E0]/80">Selling Price</span>
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={market.sellingPrice}
-                              onChange={(e) => updateMarket(market.id, 'sellingPrice', Number(e.target.value))}
-                              className="w-full rounded-xl border border-white/10 bg-[#1A0F0B] px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
-                            />
-                          </label>
-                          <label className="space-y-2">
-                            <span className="text-sm font-medium text-[#FFF3E0]/80">Final Customer Price</span>
-                            <input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={market.customerPrice}
-                              onChange={(e) => updateMarket(market.id, 'customerPrice', Number(e.target.value))}
-                              className="w-full rounded-xl border border-white/10 bg-[#1A0F0B] px-4 py-3 text-[#FFF3E0] focus:border-[#D4AF37]/50 focus:outline-none"
-                            />
-                          </label>
+                          <div className="space-y-2 rounded-xl border border-white/10 bg-[#1A0F0B] px-4 py-3">
+                            <span className="text-sm font-medium text-[#FFF3E0]/80">List (computed)</span>
+                            <div className="text-lg font-semibold text-[#FFF3E0]">
+                              {synced
+                                ? `${CURRENCY_SYMBOLS[market.currency]}${synced.listPrice}`
+                                : '—'}
+                            </div>
+                          </div>
+                          <div className="space-y-2 rounded-xl border border-white/10 bg-[#1A0F0B] px-4 py-3">
+                            <span className="text-sm font-medium text-[#FFF3E0]/80">B2B (computed)</span>
+                            <div className="text-lg font-semibold text-[#D4AF37]">
+                              {synced
+                                ? `${CURRENCY_SYMBOLS[market.currency]}${synced.sellingPrice}`
+                                : '—'}
+                            </div>
+                          </div>
+                          <div className="space-y-2 rounded-xl border border-white/10 bg-[#1A0F0B] px-4 py-3">
+                            <span className="text-sm font-medium text-[#FFF3E0]/80">Customer (computed)</span>
+                            <div className="text-lg font-semibold text-[#FFF3E0]">
+                              {synced
+                                ? `${CURRENCY_SYMBOLS[market.currency]}${synced.customerPrice}`
+                                : '—'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
@@ -649,7 +1029,7 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
 
               {previewMarket && (
                 <section className="rounded-2xl border border-[#D4AF37]/10 bg-[#D4AF37]/5 p-5">
-                  <h3 className="text-lg font-semibold text-[#D4AF37]">Storefront Preview</h3>
+                  <h3 className="text-lg font-semibold text-[#D4AF37]">6. Live multi-currency preview</h3>
                   <p className="mt-1 text-sm text-[#FFF3E0]/60">
                     Default market: {previewMarket.marketName} ({previewMarket.marketCode})
                   </p>
@@ -667,12 +1047,30 @@ export function SimpleEnhancedProductModal({ isOpen, onClose, onSave, product }:
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs uppercase tracking-wider text-[#FFF3E0]/50">Wholesale</div>
+                      <div className="text-xs uppercase tracking-wider text-[#FFF3E0]/50">B2B (same market)</div>
                       <div className="text-lg font-semibold text-[#D4AF37]">
-                        {CURRENCY_SYMBOLS[wholesaleCurrency]}{wholesalePrice}
+                        {CURRENCY_SYMBOLS[previewMarket.currency]}{previewMarket.sellingPrice}
                       </div>
                     </div>
                   </div>
+                  {engineBundlePreview && (
+                    <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[#D4AF37]/20 pt-4 md:grid-cols-4">
+                      {(['INR', 'BDT', 'USD', 'EUR'] as const).map(code => {
+                        const eff = effectiveB2cInr(engineBundlePreview.tier);
+                        const snap = engineBundlePreview.exchangeSnapshot;
+                        const amt = convertFromInr(eff, code, snap);
+                        return (
+                          <div key={code} className="rounded-lg bg-black/20 px-3 py-2">
+                            <div className="text-[10px] uppercase tracking-wider text-[#FFF3E0]/40">{code}</div>
+                            <div className="font-semibold text-[#FFF3E0]">
+                              {CURRENCY_SYMBOLS[code]}
+                              {amt}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </section>
               )}
             </form>

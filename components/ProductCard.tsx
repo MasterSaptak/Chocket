@@ -7,8 +7,10 @@ import { useState } from 'react';
 import { useCart } from './CartProvider';
 import { toast } from 'sonner';
 import { SmartImage } from './SmartImage';
+import { useCurrency } from '@/hooks/useCurrency';
 import { enhancedToLegacy, getProductDisplayPricing, normalizeProduct } from '@/lib/product-adapter';
-import { CURRENCY_SYMBOLS, getMarketDiscountPercent, getMarketSavings } from '@/lib/currency';
+import { formatApproxSecondary, getListAndCustomerInCurrency } from '@/lib/pricing-engine';
+import { CURRENCY_SYMBOLS } from '@/lib/currency';
 import type { Product as ProductRecord, LegacyProduct } from '@/types';
 
 export type Product = LegacyProduct | ProductRecord;
@@ -18,11 +20,25 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { currentCurrency } = useCurrency();
   const normalizedProduct = normalizeProduct(product);
   const legacyProduct = enhancedToLegacy(normalizedProduct);
   const displayPricing = getProductDisplayPricing(normalizedProduct);
-  const discount = getMarketDiscountPercent(displayPricing.market);
-  const savings = getMarketSavings(displayPricing.market);
+  const alt = getListAndCustomerInCurrency(normalizedProduct, currentCurrency);
+  const listAmount = alt?.list ?? displayPricing.list.amount;
+  const customerAmount = alt?.customer ?? displayPricing.customer.amount;
+  const priceCurrency = alt?.currency ?? displayPricing.customer.currency;
+  const discount =
+    listAmount > 0 && customerAmount < listAmount
+      ? Math.round(((listAmount - customerAmount) / listAmount) * 100)
+      : 0;
+  const savings =
+    listAmount > customerAmount ? Math.round((listAmount - customerAmount) * 100) / 100 : 0;
+  const approxSecondary = formatApproxSecondary(
+    normalizedProduct,
+    priceCurrency,
+    c => CURRENCY_SYMBOLS[c]
+  );
   const [isHovered, setIsHovered] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -185,23 +201,31 @@ export function ProductCard({ product }: ProductCardProps) {
 
         <div className="flex items-end justify-between pt-2">
           <div className="flex flex-col">
-            {displayPricing.list.amount > displayPricing.customer.amount && (
+            {listAmount > customerAmount && (
               <span className="text-xs text-[#FFF3E0]/30 line-through">
-                {CURRENCY_SYMBOLS[displayPricing.list.currency]}{displayPricing.list.amount}
+                {CURRENCY_SYMBOLS[priceCurrency]}
+                {listAmount}
               </span>
             )}
-            <div className="flex items-center gap-2">
-              <motion.span
-                className="font-bold text-xl text-[#FFF3E0]"
-                animate={isHovered ? { scale: [1, 1.08, 1] } : {}}
-                transition={{ duration: 0.3 }}
-              >
-                {CURRENCY_SYMBOLS[displayPricing.customer.currency]}{displayPricing.customer.amount}
-              </motion.span>
-              {discount > 0 && (
-                <span className="text-[10px] text-[#EF5350] font-medium">
-                  SAVE {CURRENCY_SYMBOLS[displayPricing.customer.currency]}{savings}
-                </span>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <motion.span
+                  className="font-bold text-xl text-[#FFF3E0]"
+                  animate={isHovered ? { scale: [1, 1.08, 1] } : {}}
+                  transition={{ duration: 0.3 }}
+                >
+                  {CURRENCY_SYMBOLS[priceCurrency]}
+                  {customerAmount}
+                </motion.span>
+                {discount > 0 && (
+                  <span className="text-[10px] text-[#EF5350] font-medium">
+                    SAVE {CURRENCY_SYMBOLS[priceCurrency]}
+                    {savings}
+                  </span>
+                )}
+              </div>
+              {approxSecondary && (
+                <span className="text-[10px] text-[#FFF3E0]/35">{approxSecondary}</span>
               )}
             </div>
           </div>

@@ -8,6 +8,12 @@ import type {
   ProductMarketPricing,
   ProductIntakeDraft,
 } from '@/types';
+import {
+  buildProductInrPricing,
+  convertToInr,
+  getDefaultExchangeSnapshot,
+  syncProductFieldsFromInrPricing,
+} from '@/lib/pricing-engine';
 
 const DEFAULT_CURRENCY: Currency = 'INR';
 const DEFAULT_MARKET_ID = 'primary-market';
@@ -81,14 +87,34 @@ export function isProductIntakeDraft(product: any): product is ProductIntakeDraf
 }
 
 export function intakeToEnhanced(intake: ProductIntakeDraft): Product {
-  const market = buildPrimaryMarket(
-    intake.originMrp.currency,
-    intake.originMrp.amount,
-    intake.originMrp.amount,
-    intake.originMrp.amount
-  );
+  const snap = getDefaultExchangeSnapshot();
+  const now = intake.createdAt || new Date().toISOString();
+  const anchorInr = convertToInr(intake.originMrp.amount, intake.originMrp.currency, snap);
+  const inrPricing = buildProductInrPricing({
+    originTruth: {
+      originCountry: intake.originCountry,
+      originCurrency: intake.originMrp.currency,
+      originMrp: intake.originMrp.amount,
+      capturedAt: now,
+    },
+    exchangeSnapshot: {
+      ...snap,
+      lastUpdated: now,
+      source: 'default',
+    },
+    landedCost: {
+      purchaseCostInr: 0,
+      shippingInr: 0,
+      taxInr: 0,
+      miscInr: 0,
+    },
+    tier: {
+      b2bPriceInr: anchorInr,
+      b2cPriceInr: anchorInr,
+    },
+  });
 
-  return {
+  const draft: Product = {
     id: 'draft-product',
     sellerId: '',
     name: intake.name,
@@ -100,8 +126,15 @@ export function intakeToEnhanced(intake: ProductIntakeDraft): Product {
       selling: toCurrencyPrice(intake.originMrp.amount, intake.originMrp.currency),
     },
     wholesale: toCurrencyPrice(intake.originMrp.amount, intake.originMrp.currency),
-    markets: [market],
-    defaultMarketId: market.id,
+    markets: [
+      buildPrimaryMarket(
+        intake.originMrp.currency,
+        intake.originMrp.amount,
+        intake.originMrp.amount,
+        intake.originMrp.amount
+      ),
+    ],
+    defaultMarketId: DEFAULT_MARKET_ID,
     images: intake.mainImageUrl ? [intake.mainImageUrl] : [],
     category: intake.category,
     stock: 0,
@@ -113,9 +146,12 @@ export function intakeToEnhanced(intake: ProductIntakeDraft): Product {
       originCountry: intake.originCountry,
       procurementCountry: intake.originCountry,
     },
-    createdAt: intake.createdAt || new Date().toISOString(),
-    updatedAt: intake.updatedAt || intake.createdAt || new Date().toISOString(),
+    createdAt: now,
+    updatedAt: intake.updatedAt || now,
+    inrPricing,
   };
+
+  return syncProductFieldsFromInrPricing(draft);
 }
 
 /**
@@ -252,7 +288,7 @@ export function normalizeProduct(product: any): Product {
   const list = defaultMarket.listPrice;
   const selling = defaultMarket.sellingPrice;
 
-  return {
+  const base: Product = {
     ...normalized,
     pricing: {
       buying: procurement,
@@ -270,4 +306,10 @@ export function normalizeProduct(product: any): Product {
       certifications: normalized.supplyChain?.certifications,
     },
   };
+
+  if (base.inrPricing) {
+    return syncProductFieldsFromInrPricing(base);
+  }
+
+  return base;
 }
