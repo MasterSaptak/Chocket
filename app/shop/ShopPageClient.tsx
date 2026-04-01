@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Filter, ChevronDown, X, Star, IndianRupee, Tag, Check } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { enhancedToLegacy, normalizeProduct } from '@/lib/product-adapter';
-import type { Product } from '@/types';
+import type { LegacyProduct } from '@/types';
 
 interface ShopPageClientProps {
-  initialProducts: Product[];
+  initialProducts: LegacyProduct[];
 }
 
 export default function ShopPageClient({ initialProducts }: ShopPageClientProps) {
