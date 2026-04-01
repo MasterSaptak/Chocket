@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'motion/react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Star, Minus, Plus, ShoppingCart, Heart, Share2, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
@@ -9,6 +8,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { Product } from '@/lib/products';
 import { useCart } from '@/components/CartProvider';
 import { toast } from 'sonner';
+import { SmartImage } from '@/components/SmartImage';
 
 interface ProductPageClientProps {
   product: Product;
@@ -77,13 +77,12 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
               transition={{ duration: 0.5 }}
               className="relative aspect-square rounded-[2rem] overflow-hidden bg-card border border-border shadow-sm"
             >
-              <Image
+              <SmartImage
                 src={images[activeImage]}
                 alt={product.name}
                 fill
                 className="object-cover"
                 referrerPolicy="no-referrer"
-                priority
               />
               {discount > 0 && (
                 <span className="absolute top-6 left-6 bg-destructive text-destructive-foreground text-sm font-bold px-3 py-1.5 rounded-full shadow-md z-10">
@@ -102,7 +101,7 @@ export default function ProductPageClient({ product, relatedProducts }: ProductP
                       activeImage === idx ? 'border-accent shadow-md' : 'border-transparent opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <Image src={img} alt={`Thumbnail ${idx}`} fill className="object-cover" referrerPolicy="no-referrer" />
+                    <SmartImage src={img} alt={`Thumbnail ${idx}`} fill className="object-cover" referrerPolicy="no-referrer" />
                   </button>
                 ))}
               </div>

@@ -3,9 +3,9 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Package, User, MapPin, CreditCard, Calendar, Clock, Truck, CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import { Order, updateOrderStatus } from '@/lib/orders';
-import Image from 'next/image';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { SmartImage } from './SmartImage';
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
@@ -115,11 +115,12 @@ export function OrderDetailsModal({ isOpen, onClose, order, onStatusUpdate }: Or
                     {order.items.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
                         <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10 shrink-0">
-                          <Image
-                            src={item.images[0] || 'https://picsum.photos/seed/chocolate/200/200'}
+                          <SmartImage
+                            src={item.images[0]}
                             alt={item.name}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
+                            referrerPolicy="no-referrer"
                           />
                         </div>
                         <div className="flex-1 min-w-0">

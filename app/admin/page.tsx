@@ -10,10 +10,9 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@/components/ProductCard';
-import { getAllProducts, addProduct, updateProduct, deleteProduct, deleteProducts, subscribeToProducts } from '@/lib/products';
+import { getAllProducts, addProduct, addProductByRole, updateProduct, deleteProduct, deleteProducts, subscribeToProducts } from '@/lib/products';
 import { ProductModal } from '@/components/ProductModal';
 import { OrderDetailsModal } from '@/components/OrderDetailsModal';
 import { ReviewsModal } from '@/components/ReviewsModal';
@@ -26,6 +25,7 @@ import { RouteGuard } from '@/components/RouteGuard';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/lib/auth';
 import type { ChocketUser, UserRole, SellerApplication } from '@/types';
+import { SmartImage } from '@/components/SmartImage';
 
 const data = [
   { name: 'Mon', sales: 4000, profit: 2400 },
@@ -114,7 +114,13 @@ function AdminDashboardContent() {
         await updateProduct(editingProduct.id, productData);
         toast.success('Product updated successfully');
       } else {
-        await addProduct(productData);
+        const uid = currentAuthUser?.uid;
+        const role = userData?.role as UserRole | undefined;
+        if (uid && role) {
+          await addProductByRole(productData, uid, role);
+        } else {
+          await addProduct(productData);
+        }
         toast.success('Product added successfully');
       }
     } catch (error) {
@@ -573,11 +579,12 @@ function AdminDashboardContent() {
                               >
                                 <div className="flex gap-3">
                                   <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 shrink-0 relative">
-                                    <Image 
-                                      src={item.images[0] || 'https://picsum.photos/seed/placeholder/600/600'} 
+                                    <SmartImage
+                                      src={item.images[0]}
                                       alt={item.name} 
                                       fill 
                                       className="object-cover" 
+                                      referrerPolicy="no-referrer"
                                     />
                                   </div>
                                   <div className="flex-1 min-w-0">
@@ -736,11 +743,12 @@ function AdminDashboardContent() {
                         }}
                       >
                         <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                          <Image 
-                            src={item.images[0] || 'https://picsum.photos/seed/placeholder/600/600'} 
+                          <SmartImage
+                            src={item.images[0]}
                             alt={item.name} 
                             fill 
                             className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                            referrerPolicy="no-referrer"
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -837,7 +845,7 @@ function AdminDashboardContent() {
                               <td className="p-4">
                                 <div className="flex items-center gap-3">
                                   <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                                    <Image src={product.images[0] || 'https://picsum.photos/seed/placeholder/600/600'} alt={product.name} fill className="object-cover" />
+                                    <SmartImage src={product.images[0]} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
                                     {discount > 0 && (
                                       <div className="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-bl-md shadow-sm">
                                         -{discount}%

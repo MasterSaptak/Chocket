@@ -8,8 +8,8 @@ import { useCart } from '@/components/CartProvider';
 import { toast } from 'sonner';
 import { db, auth } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import Image from 'next/image';
 import { processOrderRewards } from '@/lib/rewards-service';
+import { SmartImage } from '@/components/SmartImage';
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
@@ -303,7 +303,7 @@ export default function CheckoutPage() {
                 {items.map((item) => (
                   <div key={item.product.id} className="flex gap-4">
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border shrink-0">
-                      <Image src={item.product.images[0] || 'https://picsum.photos/seed/placeholder/600/600'} alt={item.product.name} fill className="object-cover" />
+                      <SmartImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium text-primary line-clamp-2 text-sm">{item.product.name}</h4>

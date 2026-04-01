@@ -168,11 +168,14 @@ service cloud.firestore {
         isManager()
       );
       
-      // Sellers can create versions (submit for review)
+      // Sellers submit pending_review; managers/super_admin may also create an
+      // already-approved version record when publishing directly (see createApprovedVersion).
       allow create: if isAuthenticated() &&
         request.resource.data.createdBy == request.auth.uid &&
-        request.resource.data.status == 'pending_review' &&
-        (isSeller() || isManager());
+        (
+          (request.resource.data.status == 'pending_review' && (isSeller() || isManager())) ||
+          (request.resource.data.status == 'approved' && isManager())
+        );
       
       // Managers can update versions (approve/reject)
       // Super Admin can also bypass

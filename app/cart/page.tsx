@@ -1,10 +1,10 @@
 'use client';
 
 import { motion } from 'motion/react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { useCart } from '@/components/CartProvider';
+import { SmartImage } from '@/components/SmartImage';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, totalPrice } = useCart();
@@ -63,7 +63,7 @@ export default function CartPage() {
                 className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-card rounded-3xl border border-border shadow-sm"
               >
                 <div className="relative w-full sm:w-32 aspect-square rounded-2xl overflow-hidden bg-muted shrink-0">
-                  <Image src={item.product.images[0] || 'https://picsum.photos/seed/placeholder/600/600'} alt={item.product.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                  <SmartImage src={item.product.images[0]} alt={item.product.name} fill className="object-cover" referrerPolicy="no-referrer" />
                 </div>
 
                 <div className="flex-1 flex flex-col w-full">

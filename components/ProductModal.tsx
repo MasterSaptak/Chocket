@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product } from '@/components/ProductCard';
+import { SmartImage } from './SmartImage';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -68,13 +68,23 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.images.length === 0) {
+
+    let finalImages = formData.images;
+    if (newImageUrl.trim() && newImageUrl.startsWith('http')) {
+      finalImages = [...finalImages, newImageUrl.trim()];
+      setNewImageUrl('');
+    }
+
+    if (finalImages.length === 0) {
       toast.error('Please add at least one product image');
       return;
     }
+
+    const dataToSave = { ...formData, images: finalImages };
+    setFormData(dataToSave);
     setIsSaving(true);
     try {
-      await onSave(formData);
+      await onSave(dataToSave);
       onClose();
     } catch (error) {
       console.error('Error saving product:', error);
@@ -107,6 +117,10 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
       images: [...prev.images, newImageUrl]
     }));
     setNewImageUrl('');
+  };
+
+  const showUploadUnderConstruction = () => {
+    toast.info('Adding images from local device is under construction. Please use an image URL for now.');
   };
 
   const removeImage = (index: number) => {
@@ -265,6 +279,7 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
                     type="url" 
                     value={newImageUrl}
                     onChange={(e) => setNewImageUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImageUrl(); } }}
                     className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/50 transition-all"
                     placeholder="Enter image URL..."
                   />
@@ -278,10 +293,24 @@ export function ProductModal({ isOpen, onClose, onSave, product }: ProductModalP
                   </button>
                 </div>
 
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={showUploadUnderConstruction}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-white/5 px-4 py-2.5 text-sm text-[#D4AF37] transition-all hover:bg-white/10"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload from device
+                  </button>
+                  <span className="text-xs text-[#FFF3E0]/50">
+                    Local upload is under construction. Please paste a public image URL for now.
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {formData.images.map((url, index) => (
                     <div key={index} className="group relative aspect-square rounded-xl overflow-hidden border border-white/10 bg-black/20">
-                      <Image 
+                      <SmartImage
                         src={url} 
                         alt={`Product ${index}`} 
                         fill 

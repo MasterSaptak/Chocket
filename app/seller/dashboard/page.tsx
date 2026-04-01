@@ -18,9 +18,9 @@ import { subscribeToSellerOrders, updateOrderStatusByRole } from '@/lib/orders';
 import type { Order } from '@/lib/orders';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import type { ProductVersion, Product } from '@/types';
 import Link from 'next/link';
+import { SmartImage } from '@/components/SmartImage';
 
 interface ProductView {
   id: string;
@@ -102,7 +102,7 @@ function EditAppealModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="flex items-center gap-3 p-3 bg-[#0D0705]/60 rounded-xl border border-[#3E2723]">
             <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-white/10 shrink-0">
-              <Image src={product.images[0] || 'https://picsum.photos/seed/choc/100/100'} alt={product.name} fill className="object-cover" />
+              <SmartImage src={product.images[0]} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
             </div>
             <div>
               <p className="font-medium text-sm text-[#FFF3E0]">{product.name}</p>
@@ -185,9 +185,47 @@ function CreateProductModal({
   const [stock, setStock] = useState('10');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [newImageUrl, setNewImageUrl] = useState('');
+
+  const addImageUrl = () => {
+    const trimmedUrl = newImageUrl.trim();
+    if (!trimmedUrl) return;
+    if (!trimmedUrl.startsWith('http')) {
+      toast.error('Please enter a valid URL');
+      return;
+    }
+    setImages((prev) => [...prev, trimmedUrl]);
+    setNewImageUrl('');
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const setMainImage = (index: number) => {
+    setImages((prev) => {
+      const next = [...prev];
+      const [selected] = next.splice(index, 1);
+      return [selected, ...next];
+    });
+  };
+
+  const showUploadUnderConstruction = () => {
+    toast.info('Adding images from local device is under construction. Please use an image URL for now.');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalImages = newImageUrl.trim() && newImageUrl.startsWith('http')
+      ? [...images, newImageUrl.trim()]
+      : images;
+
+    if (finalImages.length === 0) {
+      toast.error('Please add at least one product image');
+      return;
+    }
+
     onSubmit({
       name,
       price: parseFloat(price),
@@ -195,7 +233,7 @@ function CreateProductModal({
       stock: parseInt(stock),
       category,
       description,
-      images: ['https://picsum.photos/seed/' + Math.random().toString() + '/400/400'], // Test logic
+      images: finalImages,
     });
   };
 
@@ -260,6 +298,57 @@ function CreateProductModal({
             <label className="text-xs font-semibold text-[#FFF3E0]/60 uppercase tracking-wider">Description</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} required
               className="w-full mt-1.5 px-4 py-3 bg-[#0D0705]/60 border border-[#3E2723] rounded-xl text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/30 transition-all resize-none" />
+          </div>
+
+          <div className="space-y-4">
+            <label className="text-xs font-semibold text-[#FFF3E0]/60 uppercase tracking-wider">Product Images</label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImageUrl(); } }}
+                placeholder="Paste image URL..."
+                className="w-full mt-1.5 px-4 py-3 bg-[#0D0705]/60 border border-[#3E2723] rounded-xl text-[#FFF3E0] focus:outline-none focus:border-[#D4AF37]/50 focus:ring-1 focus:ring-[#D4AF37]/30 transition-all"
+              />
+              <button
+                type="button"
+                onClick={addImageUrl}
+                className="mt-1.5 rounded-xl border border-[#D4AF37]/20 bg-white/5 px-4 py-3 text-[#D4AF37] transition-all hover:bg-white/10"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={showUploadUnderConstruction}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#D4AF37]/20 bg-white/5 px-4 py-2.5 text-sm text-[#D4AF37] transition-all hover:bg-white/10"
+              >
+                <Upload className="h-4 w-4" />
+                Upload from device
+              </button>
+              <span className="text-xs text-[#FFF3E0]/50">Local upload is under construction. Please use a public image URL.</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {images.map((url, index) => (
+                <div key={url + index} className="group relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                  <SmartImage src={url} alt={`Product ${index + 1}`} fill className="object-cover" referrerPolicy="no-referrer" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                    {index !== 0 && (
+                      <button type="button" onClick={() => setMainImage(index)} className="text-[10px] font-medium text-[#D4AF37] hover:underline">
+                        Set Main
+                      </button>
+                    )}
+                    <button type="button" onClick={() => removeImage(index)} className="text-[10px] font-medium text-red-400 hover:underline">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <button type="submit" disabled={isSubmitting}
@@ -693,7 +782,7 @@ function SellerDashboardContent() {
                               <td className="px-5 py-4">
                                 <div className="flex items-center gap-4">
                                   <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-[#0D0705]">
-                                    <Image src={product.images[0] || 'https://picsum.photos/seed/choc/100/100'} alt={product.name} fill className="object-cover" />
+                                    <SmartImage src={product.images[0]} alt={product.name} fill className="object-cover" referrerPolicy="no-referrer" />
                                   </div>
                                   <div>
                                     <p className="font-medium text-sm text-[#FFF3E0] max-w-[200px] truncate">{product.name}</p>

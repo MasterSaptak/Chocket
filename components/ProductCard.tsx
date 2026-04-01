@@ -1,12 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, Heart, Star, Check, Gift, Zap, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { useCart } from './CartProvider';
 import { toast } from 'sonner';
+import { SmartImage } from './SmartImage';
 
 export interface Product {
   id: string;
@@ -130,11 +130,10 @@ export function ProductCard({ product }: ProductCardProps) {
 
       {/* Image */}
       <div onClick={() => window.location.href = `/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden bg-[#2C1A12]/50 cursor-pointer">
-        <Image
-          src={product.images[0] || 'https://picsum.photos/seed/placeholder/600/600'}
+        <SmartImage
+          src={product.images[0]}
           alt={product.name}
           fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           referrerPolicy="no-referrer"
         />
