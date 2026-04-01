@@ -4,16 +4,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
   TrendingUp, DollarSign, AlertCircle, Bell, Search, Menu, LogOut, Plus, Edit, Trash2, Eye, EyeOff, Loader2,
-  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText, ArrowLeft, Crown
+  CheckCircle, Clock, Truck, XCircle, MessageSquare, ChevronRight, Shield, UserCheck, UserX, Ban, ArrowUpCircle, FileText, ArrowLeft, Crown, Globe
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { Product } from '@/components/ProductCard';
-import { getAllProducts, addProduct, addProductByRole, updateProduct, deleteProduct, deleteProducts, subscribeToProducts } from '@/lib/products';
 import { ProductModal } from '@/components/ProductModal';
+import { addEnhancedProductByRole, createSimpleProductDraft, deleteEnhancedProduct, draftDataToProduct, publishDraftVersion, subscribeToEnhancedProducts, updateEnhancedProduct } from '@/lib/products-enhanced';
+import { SimpleEnhancedProductModal } from '@/components/SimpleEnhancedProductModal';
 import { OrderDetailsModal } from '@/components/OrderDetailsModal';
 import { ReviewsModal } from '@/components/ReviewsModal';
 import { getAllOrders, updateOrderStatus, updateOrdersStatus, Order, subscribeToOrders } from '@/lib/orders';
@@ -24,8 +24,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { RouteGuard } from '@/components/RouteGuard';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/lib/auth';
-import type { ChocketUser, UserRole, SellerApplication } from '@/types';
+import { subscribeToAllVersions } from '@/lib/productVersions';
+import { enhancedToLegacy, getProductDisplayPricing, normalizeProduct } from '@/lib/product-adapter';
+import { CURRENCY_SYMBOLS, getMarketDiscountPercent } from '@/lib/currency';
+import type { ChocketUser, UserRole, SellerApplication, Product, ProductIntakeDraft, ProductVersion } from '@/types';
 import { SmartImage } from '@/components/SmartImage';
+import { CurrencySettings } from '@/components/CurrencySettings';
 
 const data = [
   { name: 'Mon', sales: 4000, profit: 2400 },
@@ -49,8 +53,12 @@ function AdminDashboardContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSimpleModalOpen, setIsSimpleModalOpen] = useState(false);
+  const [isEnhancedModalOpen, setIsEnhancedModalOpen] = useState(false);
+  const [editingEnhancedProduct, setEditingEnhancedProduct] = useState<Product | null>(null);
+  const [editingDraftVersion, setEditingDraftVersion] = useState<ProductVersion | null>(null);
+  const [draftVersions, setDraftVersions] = useState<ProductVersion[]>([]);
+  const [isLoadingDraftVersions, setIsLoadingDraftVersions] = useState(true);
 
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -62,6 +70,7 @@ function AdminDashboardContent() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [productsPage, setProductsPage] = useState(1);
 
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
@@ -78,7 +87,7 @@ function AdminDashboardContent() {
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   useEffect(() => {
-    const unsubscribeProducts = subscribeToProducts((fetchedProducts) => {
+    const unsubscribeProducts = subscribeToEnhancedProducts((fetchedProducts) => {
       setProducts(fetchedProducts);
       setIsLoadingProducts(false);
     });
@@ -98,6 +107,11 @@ function AdminDashboardContent() {
       setIsLoadingApplications(false);
     });
 
+    const unsubscribeDrafts = subscribeToAllVersions((versions) => {
+      setDraftVersions(versions);
+      setIsLoadingDraftVersions(false);
+    });
+
     seedReviewsIfEmpty();
 
     return () => {
@@ -105,28 +119,70 @@ function AdminDashboardContent() {
       unsubscribeOrders();
       unsubscribeUsers();
       unsubscribeApps();
+      unsubscribeDrafts();
     };
   }, []);
 
-  const handleSaveProduct = async (productData: Omit<Product, 'id'>) => {
+  useEffect(() => {
+    setProductsPage(1);
+  }, [searchQuery]);
+
+  const handleSaveSimpleProduct = async (intakeData: ProductIntakeDraft) => {
     try {
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, productData);
+      const uid = currentAuthUser?.uid;
+      const role = userData?.role as UserRole | undefined;
+
+      if (!uid || !role) {
+        toast.error('Please sign in to save product drafts');
+        return;
+      }
+
+      await createSimpleProductDraft(intakeData, uid, role);
+      toast.success('Product draft added. Modify it before publishing to the store.');
+      setIsSimpleModalOpen(false);
+    } catch (error) {
+      console.error('Error saving product draft:', error);
+      toast.error('Failed to save draft');
+      throw error;
+    }
+  };
+
+  const handleSaveEnhancedProduct = async (productData: Omit<Product, 'id'>) => {
+    try {
+      const uid = currentAuthUser?.uid;
+      const role = userData?.role as UserRole | undefined;
+      
+      if (!uid || !role) {
+        toast.error('Please sign in to save products');
+        return;
+      }
+
+      if (editingDraftVersion) {
+        await publishDraftVersion(editingDraftVersion.id, {
+          ...productData,
+          sellerId: productData.sellerId || uid,
+        }, uid, role);
+        toast.success('Draft modified and published to the store');
+      } else if (editingEnhancedProduct) {
+        await updateEnhancedProduct(editingEnhancedProduct.id, {
+          ...productData,
+          sellerId: editingEnhancedProduct.sellerId || productData.sellerId || uid,
+        });
         toast.success('Product updated successfully');
       } else {
-        const uid = currentAuthUser?.uid;
-        const role = userData?.role as UserRole | undefined;
-        if (uid && role) {
-          await addProductByRole(productData, uid, role);
-        } else {
-          await addProduct(productData);
-        }
-        toast.success('Product added successfully');
+        await addEnhancedProductByRole({
+          ...productData,
+          sellerId: productData.sellerId || uid,
+        }, uid, role);
+        toast.success('Product created successfully');
       }
+      
+      setIsEnhancedModalOpen(false);
+      setEditingEnhancedProduct(null);
+      setEditingDraftVersion(null);
     } catch (error) {
-      console.error('Error saving product:', error);
+      console.error('Error saving enhanced product:', error);
       toast.error('Failed to save product');
-      throw error;
     }
   };
 
@@ -135,7 +191,7 @@ function AdminDashboardContent() {
       return;
     }
     try {
-      await deleteProduct(id);
+      await deleteEnhancedProduct(id);
       toast.success('Product deleted successfully');
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -164,7 +220,7 @@ function AdminDashboardContent() {
 
     setIsBulkUpdating(true);
     try {
-      await deleteProducts(Array.from(selectedProducts));
+      await Promise.all(Array.from(selectedProducts).map(productId => deleteEnhancedProduct(productId)));
       toast.success(`${selectedProducts.size} products deleted successfully`);
       setSelectedProducts(new Set());
     } catch (error) {
@@ -237,14 +293,22 @@ function AdminDashboardContent() {
     setIsReviewsModalOpen(true);
   };
 
-  const openAddModal = () => {
-    setEditingProduct(null);
-    setIsModalOpen(true);
+  const openEnhancedAddModal = () => {
+    setEditingEnhancedProduct(null);
+    setEditingDraftVersion(null);
+    setIsEnhancedModalOpen(true);
   };
 
-  const openEditModal = (product: Product) => {
-    setEditingProduct(product);
-    setIsModalOpen(true);
+  const openEnhancedEditModal = (product: Product) => {
+    setEditingEnhancedProduct(product);
+    setEditingDraftVersion(null);
+    setIsEnhancedModalOpen(true);
+  };
+
+  const openDraftPublishModal = (version: ProductVersion) => {
+    setEditingDraftVersion(version);
+    setEditingEnhancedProduct(draftDataToProduct(version.data));
+    setIsEnhancedModalOpen(true);
   };
 
   // User management handlers
@@ -306,6 +370,38 @@ function AdminDashboardContent() {
     u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredProducts = products.filter(p => {
+    const legacy = enhancedToLegacy(normalizeProduct(p));
+    return (
+      legacy.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      legacy.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  const filteredDraftVersions = draftVersions.filter(version => {
+    if (version.status === 'approved') {
+      return false;
+    }
+
+    const draftName =
+      'name' in version.data && typeof version.data.name === 'string'
+        ? version.data.name
+        : 'Untitled Draft';
+    const draftCategory =
+      'category' in version.data && typeof version.data.category === 'string'
+        ? version.data.category
+        : '';
+
+    return (
+      draftName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      draftCategory.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  const PRODUCTS_PER_PAGE = 12;
+  const totalProductPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const paginatedProducts = filteredProducts.slice((productsPage - 1) * PRODUCTS_PER_PAGE, productsPage * PRODUCTS_PER_PAGE);
+
   const pendingApplications = sellerApplications.filter(a => a.status === 'pending').length;
 
   const navItems = [
@@ -315,6 +411,7 @@ function AdminDashboardContent() {
     { id: 'customers', label: 'Customers', icon: Users },
     { id: 'usermgmt', label: 'User Management', icon: Shield },
     { id: 'sellerapps', label: 'Seller Applications', icon: FileText, badge: pendingApplications },
+    { id: 'currency', label: 'Currency & Rates', icon: Globe },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -370,11 +467,6 @@ function AdminDashboardContent() {
     { name: 'Delivered', value: orders.filter(o => o.status === 'delivered').length, color: '#10B981' },
     { name: 'Cancelled', value: orders.filter(o => o.status === 'cancelled').length, color: '#EF4444' },
   ].filter(item => item.value > 0);
-
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const filteredOrders = orders.filter(o => {
     const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -776,14 +868,114 @@ function AdminDashboardContent() {
           {activeTab === 'products' && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-display font-bold text-[#FFF3E0]">Products</h2>
-                <button 
-                  onClick={openAddModal}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#1A0F0B] font-semibold rounded-lg hover:opacity-90 transition-opacity shadow-[0_0_15px_rgba(212,175,55,0.3)]"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Product
-                </button>
+                <h2 className="text-3xl font-display font-bold text-[#FFF3E0]">Live Products</h2>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setIsSimpleModalOpen(true)}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#D4AF37] to-[#B8860B] text-[#1A0F0B] font-bold rounded-xl hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Product
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-[#D4AF37]/15 bg-[#2C1A12]/40 p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-[#FFF3E0]">Modify Before Publishing</h3>
+                    <p className="text-sm text-[#FFF3E0]/55">
+                      Simple-added products stay here until you open them with advanced controls and push them to the store.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-3 py-1 text-sm font-semibold text-[#D4AF37]">
+                    {filteredDraftVersions.length} drafts
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-white/10">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10 bg-black/20">
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Draft</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Image</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Origin</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Original MRP</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider">Status</th>
+                        <th className="p-4 font-medium text-[#FFF3E0]/60 text-sm uppercase tracking-wider text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {isLoadingDraftVersions ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#FFF3E0]/60">
+                            <div className="flex items-center justify-center gap-2">
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>Loading drafts...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredDraftVersions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#FFF3E0]/60">
+                            No draft products waiting for modification or publishing.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredDraftVersions.map((version) => {
+                          const draftProduct = draftDataToProduct(version.data);
+                          const pricing = getProductDisplayPricing(draftProduct);
+
+                          return (
+                            <tr key={version.id} className="hover:bg-white/5 transition-colors">
+                              <td className="p-4">
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-[#FFF3E0]">{draftProduct.name}</span>
+                                  <span className="text-xs text-[#FFF3E0]/45">{draftProduct.category}</span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-white/10 bg-black/20">
+                                  <SmartImage
+                                    src={draftProduct.images[0] || 'https://picsum.photos/seed/chocket-draft/120/120'}
+                                    alt={draftProduct.name}
+                                    fill
+                                    className="object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                              </td>
+                              <td className="p-4 text-[#FFF3E0]/80">{draftProduct.supplyChain.originCountry}</td>
+                              <td className="p-4 font-medium text-[#D4AF37]">
+                                {CURRENCY_SYMBOLS[pricing.list.currency]}{pricing.list.amount}
+                              </td>
+                              <td className="p-4">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                                  version.status === 'pending_review'
+                                    ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                    : version.status === 'approved'
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                }`}>
+                                  {version.status.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <button
+                                  onClick={() => openDraftPublishModal(version)}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-[#D4AF37]/10 px-4 py-2 text-sm font-semibold text-[#D4AF37] transition-colors hover:bg-[#D4AF37]/20"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Modify & Publish
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="bg-[#2C1A12]/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl overflow-hidden relative">
@@ -826,10 +1018,9 @@ function AdminDashboardContent() {
                           </td>
                         </tr>
                       ) : (
-                        filteredProducts.map((product) => {
-                          const discount = product.originalPrice
-                            ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-                            : 0;
+                        paginatedProducts.map((product) => {
+                          const pricing = getProductDisplayPricing(product);
+                          const discount = getMarketDiscountPercent(pricing.market);
                           const isSelected = selectedProducts.has(product.id);
                           return (
                             <tr key={product.id} className={`hover:bg-white/5 transition-colors ${isSelected ? 'bg-[#D4AF37]/5' : ''}`}>
@@ -876,7 +1067,9 @@ function AdminDashboardContent() {
                               <td className="p-4">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[#FFF3E0]/60 font-mono">
-                                    {showBuyingPrice[product.id] ? `₹${product.buyingPrice || 0}` : '••••••'}
+                                    {showBuyingPrice[product.id]
+                                      ? `${CURRENCY_SYMBOLS[pricing.procurement.currency]}${pricing.procurement.amount}`
+                                      : '••••••'}
                                   </span>
                                   <button 
                                     onClick={() => toggleBuyingPrice(product.id)}
@@ -886,7 +1079,9 @@ function AdminDashboardContent() {
                                   </button>
                                 </div>
                               </td>
-                              <td className="p-4 font-medium text-[#D4AF37]">₹{product.price}</td>
+                              <td className="p-4 font-medium text-[#D4AF37]">
+                                {CURRENCY_SYMBOLS[pricing.customer.currency]}{pricing.customer.amount}
+                              </td>
                               <td className="p-4">
                                 {discount > 0 ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20 shadow-sm">
@@ -906,7 +1101,7 @@ function AdminDashboardContent() {
                                     <MessageSquare className="w-4 h-4" />
                                   </button>
                                   <button 
-                                    onClick={() => openEditModal(product)}
+                                    onClick={() => openEnhancedEditModal(product)}
                                     className="p-2 text-[#FFF3E0]/60 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg transition-colors"
                                   >
                                     <Edit className="w-4 h-4" />
@@ -927,6 +1122,31 @@ function AdminDashboardContent() {
                   </table>
                 </div>
               </div>
+
+              {filteredProducts.length > PRODUCTS_PER_PAGE && (
+                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#2C1A12]/40 px-4 py-3 text-sm text-[#FFF3E0]/70">
+                  <span>
+                    Showing {(productsPage - 1) * PRODUCTS_PER_PAGE + 1}-{Math.min(productsPage * PRODUCTS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setProductsPage(prev => Math.max(1, prev - 1))}
+                      disabled={productsPage === 1}
+                      className="rounded-lg border border-white/10 px-3 py-2 disabled:opacity-40"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-2">Page {productsPage} / {totalProductPages}</span>
+                    <button
+                      onClick={() => setProductsPage(prev => Math.min(totalProductPages, prev + 1))}
+                      disabled={productsPage === totalProductPages}
+                      className="rounded-lg border border-white/10 px-3 py-2 disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Bulk Action Bar for Products */}
               <AnimatePresence>
@@ -1447,6 +1667,13 @@ function AdminDashboardContent() {
             </motion.div>
           )}
 
+          {/* Currency & Rates Tab */}
+          {activeTab === 'currency' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <CurrencySettings />
+            </motion.div>
+          )}
+
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-4xl">
@@ -1524,11 +1751,21 @@ function AdminDashboardContent() {
         </div>
       </main>
 
-      <ProductModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveProduct}
-        product={editingProduct}
+      <ProductModal
+        isOpen={isSimpleModalOpen}
+        onClose={() => setIsSimpleModalOpen(false)}
+        onSave={handleSaveSimpleProduct}
+      />
+
+      <SimpleEnhancedProductModal
+        isOpen={isEnhancedModalOpen}
+        onClose={() => {
+          setIsEnhancedModalOpen(false);
+          setEditingEnhancedProduct(null);
+          setEditingDraftVersion(null);
+        }}
+        onSave={handleSaveEnhancedProduct}
+        product={editingEnhancedProduct}
       />
 
       <OrderDetailsModal

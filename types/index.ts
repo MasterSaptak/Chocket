@@ -43,6 +43,53 @@ export interface SellerApplication {
   rejectionReason?: string;
 }
 
+// ===== CURRENCY & PRICING =====
+export type Currency = 'INR' | 'USD' | 'EUR' | 'BDT';
+
+export interface CurrencyPrice {
+  amount: number;
+  currency: Currency;
+}
+
+export interface ProductPricing {
+  buying: CurrencyPrice;
+  base: CurrencyPrice;
+  selling: CurrencyPrice;
+}
+
+export type DiscountType = 'percentage' | 'flat';
+
+export interface ProductDiscount {
+  type: DiscountType;
+  value: number;
+  isActive: boolean;
+  validUntil?: string;
+}
+
+export interface OriginMrp {
+  amount: number;
+  currency: Currency;
+}
+
+export interface ProductMarketPricing {
+  id: string;
+  marketName: string;
+  marketCode: string;
+  currency: Currency;
+  listPrice: number;
+  sellingPrice: number;
+  customerPrice: number;
+  discount?: ProductDiscount;
+}
+
+export interface SupplyChain {
+  originCountry: string;
+  procurementCountry: string;
+  supplier?: string;
+  processingLocation?: string;
+  certifications?: string[];
+}
+
 // ===== PRODUCT =====
 export interface Product {
   id: string;
@@ -50,9 +97,10 @@ export interface Product {
   name: string;
   brand: string;
   description: string;
-  prices: {
-    [currency: string]: number;
-  };
+  pricing: ProductPricing;
+  wholesale: CurrencyPrice;
+  markets: ProductMarketPricing[];
+  defaultMarketId: string;
   images: string[];
   category: string;
   stock: number;
@@ -63,15 +111,66 @@ export interface Product {
   status: 'live';
   approvedBy: string;
   bypass?: boolean;
+  supplyChain: SupplyChain;
   updatedAt: string;
   createdAt: string;
+}
+
+export interface ProductIntakeDraft {
+  name: string;
+  category: string;
+  originCountry: string;
+  originMrp: OriginMrp;
+  mainImageUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ===== LEGACY PRODUCT (for backward compatibility) =====
+export interface LegacyProduct {
+  id: string;
+  sellerId?: string;
+  name: string;
+  description?: string;
+  price: number;
+  buyingPrice?: number;
+  originalPrice?: number;
+  images: string[];
+  category: string;
+  stock?: number;
+  rating: number;
+  reviews: number;
+  isNew?: boolean;
+  isBestSeller?: boolean;
+  status?: string;
+  approvedBy?: string;
+  bypass?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// ===== EXCHANGE RATES =====
+export interface ExchangeRate {
+  id: string;
+  baseCurrency: Currency;
+  targetCurrency: Currency;
+  rate: number;
+  lastUpdated: string;
+  source: 'manual' | 'api';
+}
+
+export interface CurrencySettings {
+  defaultCurrency: Currency;
+  autoConversion: boolean;
+  supportedCurrencies: Currency[];
+  lastRateUpdate: string;
 }
 
 // ===== PRODUCT VERSION (Moderation System) =====
 export interface ProductVersion {
   id: string;
   productId: string;
-  data: Partial<Product>;
+  data: Partial<Product> | ProductIntakeDraft;
   status: ProductStatus;
   createdBy: string;
   reviewedBy?: string;

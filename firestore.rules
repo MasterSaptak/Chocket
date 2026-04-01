@@ -288,5 +288,31 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isManager();
     }
+
+    // ===============================================================
+    // EXCHANGE RATES COLLECTION
+    // ===============================================================
+    match /exchange_rates/{rateId} {
+      // Anyone can read exchange rates for currency conversion
+      allow read: if true;
+      
+      // Only managers can create/update exchange rates
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
+
+    // ===============================================================
+    // CURRENCY SETTINGS DOCUMENT
+    // ===============================================================
+    match /settings/currency {
+      // Anyone can read currency settings
+      allow read: if true;
+      
+      // Only managers can update currency settings
+      allow create: if isManager();
+      allow update: if isManager();
+      allow delete: if isManager();
+    }
   }
 }

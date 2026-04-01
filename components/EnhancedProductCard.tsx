@@ -2,50 +2,65 @@
 
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Heart, Star, Check, Gift, Zap, Eye } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Check, Gift, Zap, Eye, Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useCart } from './CartProvider';
 import { toast } from 'sonner';
 import { SmartImage } from './SmartImage';
-import { enhancedToLegacy, getProductDisplayPricing, normalizeProduct } from '@/lib/product-adapter';
-import { CURRENCY_SYMBOLS, getMarketDiscountPercent, getMarketSavings } from '@/lib/currency';
-import type { Product as ProductRecord, LegacyProduct } from '@/types';
+import { CurrencyDisplay, DiscountBadge } from './CurrencyDisplay';
+import { calculateDiscountedPrice } from '@/lib/currency';
+import type { Product } from '@/types';
 
-export type Product = LegacyProduct | ProductRecord;
-
-interface ProductCardProps {
+interface EnhancedProductCardProps {
   product: Product;
+  showMultiCurrency?: boolean;
+  targetCurrencies?: string[];
 }
 
-export function ProductCard({ product }: ProductCardProps) {
-  const normalizedProduct = normalizeProduct(product);
-  const legacyProduct = enhancedToLegacy(normalizedProduct);
-  const displayPricing = getProductDisplayPricing(normalizedProduct);
-  const discount = getMarketDiscountPercent(displayPricing.market);
-  const savings = getMarketSavings(displayPricing.market);
+export function EnhancedProductCard({ 
+  product, 
+  showMultiCurrency = false,
+  targetCurrencies = ['USD', 'EUR', 'BDT']
+}: EnhancedProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const { addItem } = useCart();
 
+  // Calculate final price with discount
+  const finalPrice = product.discount && product.discount.isActive
+    ? calculateDiscountedPrice(product.pricing.selling, product.discount)
+    : product.pricing.selling;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem(legacyProduct, 1);
+    // Convert to legacy format for cart compatibility
+    const legacyProduct = {
+      id: product.id,
+      name: product.name,
+      price: finalPrice.amount,
+      images: product.images,
+      category: product.category,
+      rating: product.rating,
+      reviews: product.reviews,
+      description: product.description,
+    };
+    addItem(legacyProduct as any, 1);
     setIsAdded(true);
-    toast.success(`${normalizedProduct.name} added to cart! 🍫`);
+    toast.success(`${product.name} added to cart! 🍫`);
     setTimeout(() => setIsAdded(false), 2000);
   };
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem(legacyProduct, 1);
+    handleAddToCart(e);
     toast.success('Redirecting to checkout...', { duration: 1500 });
     window.location.href = '/checkout';
   };
 
   const handleSendGift = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem(legacyProduct, 1);
+    handleAddToCart(e);
     toast('🎁 Gift mode activated!', {
       description: 'Add a personal message at checkout.',
       duration: 2500,
@@ -73,14 +88,11 @@ export function ProductCard({ product }: ProductCardProps) {
     >
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        {discount > 0 && (
-          <motion.span
-            className="bg-[#EF5350] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg tracking-wider"
-            animate={isHovered ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ duration: 0.4 }}
-          >
-            -{discount}%
-          </motion.span>
+        {product.discount && product.discount.isActive && (
+          <DiscountBadge 
+            originalPrice={product.pricing.base}
+            discountedPrice={finalPrice}
+          />
         )}
         {product.isNew && (
           <motion.span
@@ -97,6 +109,13 @@ export function ProductCard({ product }: ProductCardProps) {
           </span>
         )}
       </div>
+
+      {/* Supply Chain Badge */}
+      {product.supplyChain.originCountry !== 'India' && (
+        <div className="absolute top-4 right-14 z-10 bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[8px] font-bold px-2 py-1 rounded-full">
+          {product.supplyChain.originCountry}
+        </div>
+      )}
 
       {/* Wishlist */}
       <motion.button
@@ -115,8 +134,8 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* Image */}
       <div onClick={() => window.location.href = `/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden bg-[#2C1A12]/50 cursor-pointer">
         <SmartImage
-          src={normalizedProduct.images[0]}
-          alt={normalizedProduct.name}
+          src={product.images[0]}
+          alt={product.name}
           fill
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           referrerPolicy="no-referrer"
@@ -175,35 +194,36 @@ export function ProductCard({ product }: ProductCardProps) {
 
         <Link href={`/product/${product.id}`} className="block">
           <h3 className="font-display font-semibold text-lg text-[#FFF3E0] line-clamp-1 group-hover:text-[#D4AF37] transition-colors duration-300">
-            {normalizedProduct.name}
+            {product.name}
           </h3>
         </Link>
 
-        {normalizedProduct.description && (
-          <p className="text-[#FFF3E0]/40 text-xs line-clamp-1">{normalizedProduct.description}</p>
+        {product.description && (
+          <p className="text-[#FFF3E0]/40 text-xs line-clamp-1">{product.description}</p>
         )}
+
+        {/* Brand and Origin */}
+        <div className="flex items-center gap-2 text-[10px] text-[#FFF3E0]/40">
+          {product.brand && <span>{product.brand}</span>}
+          {product.brand && product.supplyChain.originCountry && <span>•</span>}
+          {product.supplyChain.originCountry && <span>🌍 {product.supplyChain.originCountry}</span>}
+        </div>
 
         <div className="flex items-end justify-between pt-2">
           <div className="flex flex-col">
-            {displayPricing.list.amount > displayPricing.customer.amount && (
-              <span className="text-xs text-[#FFF3E0]/30 line-through">
-                {CURRENCY_SYMBOLS[displayPricing.list.currency]}{displayPricing.list.amount}
-              </span>
-            )}
-            <div className="flex items-center gap-2">
-              <motion.span
-                className="font-bold text-xl text-[#FFF3E0]"
-                animate={isHovered ? { scale: [1, 1.08, 1] } : {}}
-                transition={{ duration: 0.3 }}
-              >
-                {CURRENCY_SYMBOLS[displayPricing.customer.currency]}{displayPricing.customer.amount}
-              </motion.span>
-              {discount > 0 && (
-                <span className="text-[10px] text-[#EF5350] font-medium">
-                  SAVE {CURRENCY_SYMBOLS[displayPricing.customer.currency]}{savings}
+            {product.discount && product.discount.isActive && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs text-[#FFF3E0]/30 line-through">
+                  {product.pricing.base.currency === 'INR' ? '₹' : '$'}{product.pricing.base.amount}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
+            <CurrencyDisplay
+              price={finalPrice}
+              showMultiple={showMultiCurrency}
+              targetCurrencies={targetCurrencies as any}
+              size="md"
+            />
           </div>
 
           <motion.button

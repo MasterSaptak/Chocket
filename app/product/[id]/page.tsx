@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { getProductById, getFeaturedProducts } from '@/lib/products';
 import ProductPageClient from './ProductPageClient';
 import Link from 'next/link';
+import { CURRENCY_SYMBOLS } from '@/lib/currency';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // Dynamic OG image URL
   const ogUrl = new URL('https://chocket.saptech.online/api/og');
   ogUrl.searchParams.set('title', product.name);
-  ogUrl.searchParams.set('price', `₹${product.price}`);
+  ogUrl.searchParams.set('price', `${CURRENCY_SYMBOLS.INR}${product.price}`);
   if (product.images?.[0]) {
     ogUrl.searchParams.set('image', product.images[0]);
   }

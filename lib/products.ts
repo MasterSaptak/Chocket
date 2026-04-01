@@ -1,9 +1,10 @@
 import { db, OperationType, handleFirestoreError } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, getDoc, query, where, orderBy, limit, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import { Product } from '@/components/ProductCard';
+import type { LegacyProduct as Product } from '@/types';
 import { createProductVersion, createApprovedVersion } from './productVersions';
 import { logAction } from './audit';
 import type { UserRole } from '@/types';
+import { enhancedToLegacy, isLegacyProduct, normalizeProduct } from './product-adapter';
 
 export type { Product };
 
@@ -308,10 +309,10 @@ export async function getFeaturedProducts(): Promise<Product[]> {
       return initialProducts.map((p, i) => ({ ...p, id: String(i + 1) }));
     }
 
-    return snapshot.docs.map(doc => ({
+    return snapshot.docs.map(doc => enhancedToLegacy(normalizeProduct({
       id: doc.id,
-      ...doc.data()
-    } as Product));
+      ...doc.data(),
+    })));
   } catch (error) {
     console.error('Error fetching featured products:', error);
     return initialProducts.map((p, i) => ({ ...p, id: String(i + 1) }));
@@ -327,10 +328,10 @@ export async function getAllProducts(): Promise<Product[]> {
       return initialProducts.map((p, i) => ({ ...p, id: String(i + 1) }));
     }
 
-    return snapshot.docs.map(doc => ({
+    return snapshot.docs.map(doc => enhancedToLegacy(normalizeProduct({
       id: doc.id,
-      ...doc.data()
-    } as Product));
+      ...doc.data(),
+    })));
   } catch (error) {
     console.error('Error fetching all products:', error);
     return initialProducts.map((p, i) => ({ ...p, id: String(i + 1) }));
@@ -342,7 +343,7 @@ export async function getProductById(id: string): Promise<Product | null> {
     const productRef = doc(db, COLLECTION_NAME, id);
     const snap = await getDoc(productRef);
     if (snap.exists()) {
-      return { id: snap.id, ...snap.data() } as Product;
+      return enhancedToLegacy(normalizeProduct({ id: snap.id, ...snap.data() }));
     }
     
     // Fallback to mock data
@@ -366,10 +367,10 @@ export function subscribeToProducts(callback: (products: Product[]) => void) {
       return;
     }
     
-    const products = snapshot.docs.map(doc => ({
+    const products = snapshot.docs.map(doc => enhancedToLegacy(normalizeProduct({
       id: doc.id,
-      ...doc.data()
-    } as Product));
+      ...doc.data(),
+    })));
     callback(products);
   }, (error) => {
     handleFirestoreError(error, OperationType.GET, COLLECTION_NAME);

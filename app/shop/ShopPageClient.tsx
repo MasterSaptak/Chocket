@@ -1,9 +1,11 @@
 'use client';
 
-import { ProductCard, Product } from '@/components/ProductCard';
+import { ProductCard } from '@/components/ProductCard';
 import { motion, AnimatePresence } from 'motion/react';
 import { Filter, ChevronDown, X, Star, IndianRupee, Tag, Check } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { enhancedToLegacy, normalizeProduct } from '@/lib/product-adapter';
+import type { Product } from '@/types';
 
 interface ShopPageClientProps {
   initialProducts: Product[];
@@ -26,7 +28,7 @@ export default function ShopPageClient({ initialProducts }: ShopPageClientProps)
   const typesArr = ['All', 'Dark', 'Milk', 'White', 'Truffle', 'Praline', 'Bar'];
 
   const filteredProducts = useMemo(() => {
-    let result = [...initialProducts];
+    let result = initialProducts.map(product => enhancedToLegacy(normalizeProduct(product)));
 
     // Category Filter
     if (activeCategory !== 'All') {

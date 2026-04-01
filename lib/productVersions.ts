@@ -12,7 +12,7 @@ import {
   onSnapshot,
   Unsubscribe,
 } from 'firebase/firestore';
-import type { ProductVersion, ProductStatus } from '@/types';
+import type { ProductVersion, ProductStatus, Product } from '@/types';
 
 const VERSIONS_COLLECTION = 'product_versions';
 
@@ -66,6 +66,17 @@ export async function getPendingVersions(): Promise<ProductVersion[]> {
   );
 }
 
+export async function getAllVersions(): Promise<ProductVersion[]> {
+  const q = query(
+    collection(db, VERSIONS_COLLECTION),
+    orderBy('createdAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(
+    (d) => ({ ...d.data(), id: d.id } as ProductVersion)
+  );
+}
+
 // ===== SUBSCRIBE TO PENDING VERSIONS =====
 export function subscribeToPendingVersions(
   callback: (versions: ProductVersion[]) => void
@@ -73,6 +84,21 @@ export function subscribeToPendingVersions(
   const q = query(
     collection(db, VERSIONS_COLLECTION),
     where('status', '==', 'pending_review'),
+    orderBy('createdAt', 'desc')
+  );
+  return onSnapshot(q, (snapshot) => {
+    const versions = snapshot.docs.map(
+      (d) => ({ ...d.data(), id: d.id } as ProductVersion)
+    );
+    callback(versions);
+  });
+}
+
+export function subscribeToAllVersions(
+  callback: (versions: ProductVersion[]) => void
+): Unsubscribe {
+  const q = query(
+    collection(db, VERSIONS_COLLECTION),
     orderBy('createdAt', 'desc')
   );
   return onSnapshot(q, (snapshot) => {
@@ -136,6 +162,22 @@ export async function approveVersion(
     productId: versionData.productId,
     productData: versionData.data,
   };
+}
+
+export async function approveVersionWithProductData(
+  versionId: string,
+  reviewedBy: string,
+  productId: string,
+  productData: Omit<Product, 'id'>
+): Promise<void> {
+  const versionRef = doc(db, VERSIONS_COLLECTION, versionId);
+  await updateDoc(versionRef, {
+    status: 'approved' as ProductStatus,
+    reviewedBy,
+    productId,
+    data: productData,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 // ===== REJECT VERSION =====
