@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Check } from 'lucide-react';
-import { Currency, CURRENCY_SYMBOLS, CURRENCY_NAMES } from '@/types';
-import { SUPPORTED_CURRENCIES } from '@/lib/currency';
+import type { Currency } from '@/types';
+import { CURRENCY_SYMBOLS, CURRENCY_NAMES, SUPPORTED_CURRENCIES } from '@/lib/currency';
 
 interface CurrencySelectorProps {
   value: Currency;
