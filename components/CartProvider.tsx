@@ -1,16 +1,16 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Product } from './ProductCard';
+import type { LegacyProduct } from '@/types';
 
 export interface CartItem {
-  product: Product;
+  product: LegacyProduct;
   quantity: number;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number) => void;
+  addItem: (product: LegacyProduct, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -51,7 +51,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, isInitialized]);
 
-  const addItem = (product: Product, quantity = 1) => {
+  const addItem = (product: LegacyProduct, quantity = 1) => {
     setItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(item => item.product.id === product.id);
       if (existingItemIndex >= 0) {

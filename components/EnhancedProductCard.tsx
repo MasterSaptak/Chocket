@@ -8,7 +8,7 @@ import { useCart } from './CartProvider';
 import { toast } from 'sonner';
 import { SmartImage } from './SmartImage';
 import { CurrencyDisplay, DiscountBadge } from './CurrencyDisplay';
-import { calculateDiscountedPrice } from '@/lib/currency';
+import { getProductDisplayPricing } from '@/lib/product-adapter';
 import type { Product } from '@/types';
 
 interface EnhancedProductCardProps {
@@ -26,11 +26,9 @@ export function EnhancedProductCard({
   const [isAdded, setIsAdded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const { addItem } = useCart();
-
-  // Calculate final price with discount
-  const finalPrice = product.discount && product.discount.isActive
-    ? calculateDiscountedPrice(product.pricing.selling, product.discount)
-    : product.pricing.selling;
+  const displayPricing = getProductDisplayPricing(product);
+  const hasDiscount = displayPricing.list.amount > displayPricing.customer.amount;
+  const finalPrice = displayPricing.customer;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -88,9 +86,9 @@ export function EnhancedProductCard({
     >
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        {product.discount && product.discount.isActive && (
+        {hasDiscount && (
           <DiscountBadge 
-            originalPrice={product.pricing.base}
+            originalPrice={displayPricing.list}
             discountedPrice={finalPrice}
           />
         )}
@@ -211,10 +209,10 @@ export function EnhancedProductCard({
 
         <div className="flex items-end justify-between pt-2">
           <div className="flex flex-col">
-            {product.discount && product.discount.isActive && (
+            {hasDiscount && (
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-[#FFF3E0]/30 line-through">
-                  {product.pricing.base.currency === 'INR' ? '₹' : '$'}{product.pricing.base.amount}
+                  {displayPricing.list.currency === 'INR' ? '₹' : '$'}{displayPricing.list.amount}
                 </span>
               </div>
             )}
