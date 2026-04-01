@@ -7,7 +7,7 @@ import {
   TrendingUp, DollarSign, Boxes, Loader2, LogOut, Search,
   ArrowDownRight, ArrowUpRight, Edit3, X, Clock,
   CheckCircle, XCircle, Send, AlertTriangle, ArrowLeft, ArrowRight,
-  Bell, Truck, Check, Store, Plus
+  Bell, Truck, Check, Store, Plus, Upload
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { RouteGuard } from '@/components/RouteGuard';
