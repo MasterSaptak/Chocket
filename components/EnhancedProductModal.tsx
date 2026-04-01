@@ -6,6 +6,7 @@ import { X, Upload, Loader2, Plus, Percent, DollarSign, Check } from 'lucide-rea
 import { toast } from 'sonner';
 import { SmartImage } from './SmartImage';
 import { CurrencySelector } from './CurrencySelector';
+import { getProductDisplayPricing, normalizeProduct } from '@/lib/product-adapter';
 import type { Product, Currency, ProductPricing, ProductDiscount, SupplyChain } from '@/types';
 
 interface EnhancedProductModalProps {
@@ -60,40 +61,46 @@ export function EnhancedProductModal({ isOpen, onClose, onSave, product }: Enhan
 
   useEffect(() => {
     if (product) {
-      setName(product.name);
-      setDescription(product.description || '');
-      setCategory(product.category);
-      setBrand(product.brand || '');
-      setStock(product.stock || 0);
-      setIsNew(product.isNew || false);
-      setIsBestSeller(product.isBestSeller || false);
+      const normalized = normalizeProduct(product);
+      const displayPricing = getProductDisplayPricing(normalized);
+
+      setName(normalized.name);
+      setDescription(normalized.description || '');
+      setCategory(normalized.category);
+      setBrand(normalized.brand || '');
+      setStock(normalized.stock || 0);
+      setIsNew(normalized.isNew || false);
+      setIsBestSeller(normalized.isBestSeller || false);
 
       // Pricing
-      if (product.pricing) {
-        setBuyingPrice(product.pricing.buying.amount);
-        setBuyingCurrency(product.pricing.buying.currency);
-        setBasePrice(product.pricing.base.amount);
-        setBaseCurrency(product.pricing.base.currency);
-        setSellingPrice(product.pricing.selling.amount);
-        setSellingCurrency(product.pricing.selling.currency);
-      }
+      setBuyingPrice(normalized.pricing.buying.amount);
+      setBuyingCurrency(normalized.pricing.buying.currency);
+      setBasePrice(displayPricing.list.amount);
+      setBaseCurrency(displayPricing.list.currency);
+      setSellingPrice(displayPricing.selling.amount);
+      setSellingCurrency(displayPricing.selling.currency);
 
       // Discount
-      if (product.discount) {
-        setHasDiscount(product.discount.isActive);
-        setDiscountType(product.discount.type);
-        setDiscountValue(product.discount.value);
-        setDiscountValidUntil(product.discount.validUntil || '');
+      if (displayPricing.discount?.isActive) {
+        setHasDiscount(true);
+        setDiscountType(displayPricing.discount.type);
+        setDiscountValue(displayPricing.discount.value);
+        setDiscountValidUntil(displayPricing.discount.validUntil || '');
+      } else {
+        setHasDiscount(false);
+        setDiscountType('percentage');
+        setDiscountValue(0);
+        setDiscountValidUntil('');
       }
 
       // Supply chain
-      if (product.supplyChain) {
-        setOriginCountry(product.supplyChain.originCountry);
-        setSupplier(product.supplyChain.supplier || '');
-        setCertifications(product.supplyChain.certifications?.join(', ') || '');
+      if (normalized.supplyChain) {
+        setOriginCountry(normalized.supplyChain.originCountry);
+        setSupplier(normalized.supplyChain.supplier || '');
+        setCertifications(normalized.supplyChain.certifications?.join(', ') || '');
       }
 
-      setImages(product.images || []);
+      setImages(normalized.images || []);
     } else {
       // Reset for new product
       setName('');
@@ -171,10 +178,15 @@ export function EnhancedProductModal({ isOpen, onClose, onSave, product }: Enhan
     setIsSaving(true);
 
     try {
+      const customerPrice = hasDiscount
+        ? discountType === 'percentage'
+          ? Math.max(0, sellingPrice - (sellingPrice * discountValue) / 100)
+          : Math.max(0, sellingPrice - discountValue)
+        : sellingPrice;
       const pricing: ProductPricing = {
         buying: { amount: buyingPrice, currency: buyingCurrency },
         base: { amount: basePrice, currency: baseCurrency },
-        selling: { amount: sellingPrice, currency: sellingCurrency },
+        selling: { amount: customerPrice, currency: sellingCurrency },
       };
 
       const discount: ProductDiscount | undefined = hasDiscount ? {
@@ -186,9 +198,12 @@ export function EnhancedProductModal({ isOpen, onClose, onSave, product }: Enhan
 
       const supplyChain: SupplyChain = {
         originCountry,
+        procurementCountry: originCountry,
         supplier: supplier || undefined,
         certifications: certifications ? certifications.split(',').map(c => c.trim()) : undefined,
       };
+
+      const primaryMarketId = product?.defaultMarketId || 'primary-market';
 
       const productData: Omit<Product, 'id'> = {
         name,
@@ -199,7 +214,18 @@ export function EnhancedProductModal({ isOpen, onClose, onSave, product }: Enhan
         isNew,
         isBestSeller,
         pricing,
-        discount,
+        wholesale: { amount: sellingPrice, currency: sellingCurrency },
+        markets: [{
+          id: primaryMarketId,
+          marketName: sellingCurrency,
+          marketCode: sellingCurrency,
+          currency: sellingCurrency,
+          listPrice: basePrice,
+          sellingPrice,
+          customerPrice,
+          discount,
+        }],
+        defaultMarketId: primaryMarketId,
         supplyChain,
         images: finalImages,
         rating: 0,
